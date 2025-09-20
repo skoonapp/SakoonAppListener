@@ -1,0 +1,7 @@
+{
+  "name": "SakoonApp Listener",
+  "description": "The admin and management app for Sakoon Listeners.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}

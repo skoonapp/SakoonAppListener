@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SakoonApp Admin</title>
+
+    <meta name="theme-color" content="#0891B2"/>
+    
+    <!-- iOS PWA Support -->
+    <link rel="apple-touch-icon" href="https://listenerimages.netlify.app/images/icon3.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="SakoonApp Admin">
+
+    <!-- Favicon -->
+    <link rel="icon" href="https://listenerimages.netlify.app/images/icon3.png" type="image/png">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      // Enable class-based dark mode in TailwindCSS
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+            extend: {
+                colors: {
+                    'deep-slate': '#3F4A5C',
+                    'user-chat-bubble': '#dcf8c6',
+                    primary: {
+                        '50': '#ecfeff',
+                        '100': '#cffafe',
+                        '200': '#a5f3fc',
+                        '300': '#67e8f9',
+                        '400': '#22d3ee',
+                        '500': '#06b6d4',
+                        '600': '#0891b2',
+                        '700': '#0e7490',
+                        '800': '#155e75',
+                        '900': '#164e63',
+                        '950': '#083344'
+                    },
+                    teal: {
+                        '50': '#f0fdfa',
+                        '100': '#ccfbf1',
+                        '200': '#99f6e4',
+                        '300': '#5eead4',
+                        '400': '#2dd4bf',
+                        '500': '#14b8a6',
+                        '600': '#0d9488',
+                        '700': '#0f766e',
+                        '800': '#115e59',
+                        '900': '#134e4a',
+                        '950': '#042f2e'
+                    }
+                }
+            }
+        }
+      }
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Zego Cloud UI Kit -->
+    <script src="https://unpkg.com/@zegocloud/zego-uikit-prebuilt/zego-uikit-prebuilt.js"></script>
+
+    <style>
+      body { font-family: 'Noto Sans', sans-serif; }
+      .animate-fade-in {
+        animation: fadeIn 0.3s ease-out;
+      }
+      @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+      }
+    </style>
+<link rel="stylesheet" href="/index.css">
+<script type="importmap">
+{
+  "imports": {
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^6.24.1",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.1.1/",
+    "react/": "https://aistudiocdn.com/react@^19.1.1/",
+    "react": "https://aistudiocdn.com/react@^19.1.1",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.0.2",
+    "firebase/": "https://aistudiocdn.com/firebase@^12.2.1/",
+    "vite": "https://aistudiocdn.com/vite@^7.1.4",
+    "workbox-core": "https://aistudiocdn.com/workbox-core@^7.3.0",
+    "vite-plugin-pwa": "https://aistudiocdn.com/vite-plugin-pwa@^1.0.3",
+    "workbox-precaching": "https://aistudiocdn.com/workbox-precaching@^7.3.0",
+    "workbox-routing": "https://aistudiocdn.com/workbox-routing@^7.3.0",
+    "uuid": "https://aistudiocdn.com/uuid@^12.0.0",
+    "express": "https://aistudiocdn.com/express@^5.1.0",
+    "firebase-functions": "https://aistudiocdn.com/firebase-functions@^6.4.0",
+    "firebase-admin": "https://aistudiocdn.com/firebase-admin@^13.5.0",
+    "cors": "https://aistudiocdn.com/cors@^2.8.5",
+    "firebase-functions/": "https://aistudiocdn.com/firebase-functions@^6.4.0/"
+  }
+}
+</script>
+</head>
+
+  <body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-200">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

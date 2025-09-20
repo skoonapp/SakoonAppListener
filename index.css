@@ -1,0 +1,37 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Disable the pull-to-refresh gesture */
+  overscroll-behavior-y: contain;
+}
+
+/* Hide the reCAPTCHA badge. The branding is included in the login form. */
+.grecaptcha-badge {
+    visibility: hidden !important;
+}
+
+/* New classes for the dynamic "new user" call screen */
+.bg-new-user-gradient {
+  background: linear-gradient(-45deg, #0d9488, #06b6d4, #22d3ee, #0e7490);
+  background-size: 400% 400%;
+}
+
+.animate-gradient-flow {
+  animation: gradient-flow 15s ease infinite;
+}
+
+@keyframes gradient-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
