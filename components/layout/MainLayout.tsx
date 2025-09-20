@@ -21,60 +21,54 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const touchEndX = useRef(0);
   const touchStartY = useRef(0);
   const touchEndY = useRef(0);
-  const swipeHandled = useRef(false);
 
-  const MIN_SWIPE_DISTANCE = 60; // Minimum distance in pixels for a swipe to be registered
+  const MIN_SWIPE_DISTANCE = 50; // Minimum horizontal distance for a swipe
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    // Reset coordinates on new touch
     touchStartX.current = e.targetTouches[0].clientX;
     touchEndX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
     touchEndY.current = e.targetTouches[0].clientY;
-    swipeHandled.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    // Continuously update the end coordinates
     touchEndX.current = e.targetTouches[0].clientX;
     touchEndY.current = e.targetTouches[0].clientY;
   };
 
   const handleTouchEnd = () => {
-    if (swipeHandled.current) return;
-
     const deltaX = touchEndX.current - touchStartX.current;
     const deltaY = touchEndY.current - touchStartY.current;
+    const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs(deltaY);
 
-    // Prioritize vertical scrolling over horizontal swiping.
-    // If the vertical movement is greater than the horizontal movement,
-    // it's likely a scroll gesture, so we do nothing and let the browser handle it.
-    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+    // To be considered a navigation swipe, the horizontal movement must be:
+    // 1. Greater than the minimum swipe distance.
+    // 2. Significantly greater than the vertical movement (to avoid conflicts with scrolling).
+    // Here, we check if the horizontal distance is at least twice the vertical distance.
+    if (absDeltaX > MIN_SWIPE_DISTANCE && absDeltaX > absDeltaY * 2) {
+      const currentPath = location.pathname;
+      const currentIndex = swipeablePaths.indexOf(currentPath);
+      
+      // Only handle swipes on the main swipeable screens
+      if (currentIndex === -1) {
         return;
-    }
-
-    const currentPath = location.pathname;
-    const currentIndex = swipeablePaths.indexOf(currentPath);
-    
-    // Only handle swipes on the main swipeable screens
-    if (currentIndex === -1) {
-      return;
-    }
-
-    const isLeftSwipe = deltaX < -MIN_SWIPE_DISTANCE;
-    const isRightSwipe = deltaX > MIN_SWIPE_DISTANCE;
-
-    if (isLeftSwipe) {
-      // Swiped left, go to the next screen
-      if (currentIndex < swipeablePaths.length - 1) {
-        navigate(swipeablePaths[currentIndex + 1]);
-        swipeHandled.current = true;
       }
-    } else if (isRightSwipe) {
-      // Swiped right, go to the previous screen
-      if (currentIndex > 0) {
-        navigate(swipeablePaths[currentIndex - 1]);
-        swipeHandled.current = true;
+      
+      if (deltaX < 0) { // Swiped left
+        if (currentIndex < swipeablePaths.length - 1) {
+          navigate(swipeablePaths[currentIndex + 1]);
+        }
+      } else { // Swiped right
+        if (currentIndex > 0) {
+          navigate(swipeablePaths[currentIndex - 1]);
+        }
       }
     }
+    // If the conditions are not met, we do nothing. This allows the browser's
+    // native vertical scrolling to function without interference.
   };
 
   return (
