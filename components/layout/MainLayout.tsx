@@ -19,26 +19,37 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchEndY = useRef(0);
   const swipeHandled = useRef(false);
 
   const MIN_SWIPE_DISTANCE = 60; // Minimum distance in pixels for a swipe to be registered
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Don't interfere with vertical scrolling if it's the primary gesture
-    if (e.currentTarget.scrollHeight > e.currentTarget.clientHeight) {
-        // Content is scrollable, be more careful
-    }
     touchStartX.current = e.targetTouches[0].clientX;
     touchEndX.current = e.targetTouches[0].clientX;
+    touchStartY.current = e.targetTouches[0].clientY;
+    touchEndY.current = e.targetTouches[0].clientY;
     swipeHandled.current = false;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     touchEndX.current = e.targetTouches[0].clientX;
+    touchEndY.current = e.targetTouches[0].clientY;
   };
 
   const handleTouchEnd = () => {
     if (swipeHandled.current) return;
+
+    const deltaX = touchEndX.current - touchStartX.current;
+    const deltaY = touchEndY.current - touchStartY.current;
+
+    // Prioritize vertical scrolling over horizontal swiping.
+    // If the vertical movement is greater than the horizontal movement,
+    // it's likely a scroll gesture, so we do nothing and let the browser handle it.
+    if (Math.abs(deltaY) > Math.abs(deltaX)) {
+        return;
+    }
 
     const currentPath = location.pathname;
     const currentIndex = swipeablePaths.indexOf(currentPath);
@@ -48,9 +59,8 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       return;
     }
 
-    const distance = touchStartX.current - touchEndX.current;
-    const isLeftSwipe = distance > MIN_SWIPE_DISTANCE;
-    const isRightSwipe = distance < -MIN_SWIPE_DISTANCE;
+    const isLeftSwipe = deltaX < -MIN_SWIPE_DISTANCE;
+    const isRightSwipe = deltaX > MIN_SWIPE_DISTANCE;
 
     if (isLeftSwipe) {
       // Swiped left, go to the next screen
