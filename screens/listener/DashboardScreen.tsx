@@ -168,7 +168,9 @@ const StatusToggle: React.FC = () => {
             <div className={`relative flex items-center bg-slate-100 dark:bg-slate-700 rounded-full p-1 ${isLocked ? 'cursor-not-allowed opacity-70' : ''}`}>
                 {/* Sliding Background */}
                 <div
-                    className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-slate-600 dark:bg-slate-900 shadow-sm rounded-full transition-transform duration-300 ease-in-out`}
+                    className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] shadow-sm rounded-full transition-all duration-300 ease-in-out ${
+                        isOnline ? 'bg-green-500' : 'bg-slate-600 dark:bg-slate-900'
+                    }`}
                     style={{ transform: isOnline ? 'translateX(100%)' : 'translateX(0)' }}
                 />
                 
