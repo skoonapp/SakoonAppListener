@@ -57,7 +57,7 @@ const InstallPWAButton: React.FC = () => {
   return (
     <div className="bg-gradient-to-r from-cyan-500 to-teal-400 dark:from-cyan-800 dark:to-teal-700 p-4 rounded-xl shadow-lg flex items-center justify-between gap-4 animate-fade-in">
         <div className="flex items-center gap-4">
-            <img src="https://listenerimages.netlify.app/images/icon3.png" alt="App Icon" className="w-12 h-12 flex-shrink-0"/>
+            <img src="https://listenerimages.netlify.app/images/icon5.png" alt="App Icon" className="w-12 h-12 flex-shrink-0"/>
             <div>
                 <h3 className="font-bold text-white text-lg">Install SakoonApp</h3>
                 <p className="text-sm text-cyan-100 dark:text-cyan-200">Get the best experience. Add to your home screen.</p>

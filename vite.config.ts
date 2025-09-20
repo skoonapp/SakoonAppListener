@@ -26,25 +26,25 @@ export default defineConfig({
         "orientation": "portrait-primary",
         "icons": [
           {
-            "src": "https://listenerimages.netlify.app/images/icon3.png",
+            "src": "https://listenerimages.netlify.app/images/icon5.png",
             "sizes": "192x192",
             "type": "image/png",
             "purpose": "any"
           },
           {
-            "src": "https://listenerimages.netlify.app/images/icon2.png",
-            "sizes": "512x512",
-            "type": "image/png",
-            "purpose": "any"
-          },
-           {
-            "src": "https://listenerimages.netlify.app/images/icon.png",
-            "sizes": "1024x1024",
+            "src": "https://listenerimages.netlify.app/images/icon4.png",
+            "sizes": "393x393",
             "type": "image/png",
             "purpose": "any"
           },
           {
-            "src": "https://listenerimages.netlify.app/images/icon2.png",
+            "src": "https://listenerimages.netlify.app/images/icon6.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+          },
+          {
+            "src": "https://listenerimages.netlify.app/images/icon6.png",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "maskable"
