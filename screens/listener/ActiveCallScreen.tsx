@@ -1,9 +1,10 @@
 
 
 
+
 import React, { useEffect, useRef, useState } from 'react';
-// FIX: Upgraded react-router-dom from v5 to v6 syntax.
-import { useParams, useNavigate } from 'react-router-dom';
+// FIX: Changed import from 'react-router-dom' to 'react-router' to resolve module export errors for hooks.
+import { useParams, useNavigate } from 'react-router';
 import { db } from '../../utils/firebase';
 import { fetchZegoToken } from '../../utils/zego';
 import { useListener } from '../../context/ListenerContext';

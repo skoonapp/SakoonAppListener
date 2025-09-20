@@ -1,8 +1,10 @@
 
 
 
+
 import React, { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+// FIX: Changed import from 'react-router-dom' to 'react-router' to resolve module export errors for hooks.
+import { useNavigate, useLocation } from 'react-router';
 import { messaging, db } from '../../utils/firebase';
 import { useListener } from '../../context/ListenerContext';
 import firebase from 'firebase/compat/app';

@@ -106,6 +106,11 @@ const StatusToggle: React.FC = () => {
     const handleStatusChange = async (newStatus: ListenerAppStatus) => {
         if (!profile || newStatus === optimisticStatus) return;
 
+        // If status is 'Busy' or 'Break', user shouldn't be able to change it.
+        if (optimisticStatus === 'Busy' || optimisticStatus === 'Break') {
+            return;
+        }
+
         const previousStatus = optimisticStatus || profile.appStatus;
         setOptimisticStatus(newStatus); 
 
@@ -124,71 +129,71 @@ const StatusToggle: React.FC = () => {
 
     if (!profile || !optimisticStatus) {
          return (
-            <div className="bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm opacity-60">
-                <div className="flex items-center justify-between gap-4">
-                    <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">
-                        Active Status
-                    </h3>
-                    <div className="inline-flex items-stretch rounded-full border border-slate-300 dark:border-slate-600 cursor-not-allowed">
-                        <span className="px-4 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Offline</span>
-                        <div className="w-px bg-slate-300 dark:bg-slate-600"></div>
-                        <span className="px-4 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Busy</span>
-                        <div className="w-px bg-slate-300 dark:bg-slate-600"></div>
-                        <span className="px-4 py-1 text-xs font-semibold text-slate-500 dark:text-slate-400">Online</span>
-                    </div>
+            <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm flex items-center justify-between gap-4 opacity-50">
+                <div>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Active Status</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Status unavailable</p>
                 </div>
-                <p className="text-xs text-red-500 dark:text-red-400 text-left mt-1.5">Profile or status could not be loaded.</p>
+                <div className="relative flex items-center bg-slate-200 dark:bg-slate-700 rounded-full p-1 cursor-not-allowed">
+                    <div className="w-20 py-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300">Offline</div>
+                    <div className="w-20 py-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300">Online</div>
+                </div>
             </div>
         );
     }
     
     const getSubtitle = () => {
         switch (optimisticStatus) {
-            case 'Available': return 'You are ready to take calls';
-            case 'Busy':
-            case 'Break': return 'You will not receive new calls';
+            case 'Available': return 'You are online and ready for calls.';
+            case 'Busy': return 'You are currently busy.';
+            case 'Break': return 'You are on a break.';
             case 'Offline':
-            default: return 'Go online to start taking calls';
+            default: return 'You are offline.';
         }
     };
     
-    const currentUiStatus = optimisticStatus === 'Break' ? 'Busy' : optimisticStatus;
+    // User cannot change status if they are busy or on a break
+    const isLocked = optimisticStatus === 'Busy' || optimisticStatus === 'Break';
     
-    const statuses: { label: string; value: ListenerAppStatus }[] = [
-        { label: 'Offline', value: 'Offline' },
-        { label: 'Busy', value: 'Busy' },
-        { label: 'Online', value: 'Available' },
-    ];
-    
+    // For the UI, if the status is Busy or Break, we'll show it as "Online" visually but locked.
+    const isOnline = optimisticStatus === 'Available' || isLocked;
+
     return (
-        <div className="bg-white dark:bg-slate-800 p-2 rounded-xl shadow-sm">
-            <div className="flex items-center justify-between gap-4">
-                <h3 className="font-semibold text-sm text-slate-800 dark:text-slate-200">
-                    Active Status
-                </h3>
-                
-                <div className="inline-flex items-stretch rounded-full border border-slate-300 dark:border-slate-600">
-                    {statuses.map((status, index) => (
-                        <React.Fragment key={status.value}>
-                            <button
-                                onClick={() => handleStatusChange(status.value)}
-                                className={`px-4 py-1 text-xs font-semibold transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 first:rounded-l-full last:rounded-r-full ${
-                                    currentUiStatus === status.value
-                                        ? (status.value === 'Available' ? 'bg-green-500 text-white' : (status.value === 'Busy' ? 'bg-orange-500 text-white' : 'bg-slate-500 text-white'))
-                                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
-                                }`}
-                                aria-pressed={currentUiStatus === status.value}
-                            >
-                                {status.label}
-                            </button>
-                            {index < statuses.length - 1 && (
-                                <div className="w-px bg-slate-300 dark:bg-slate-600"></div>
-                            )}
-                        </React.Fragment>
-                    ))}
-                </div>
+        <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm flex items-center justify-between gap-4">
+            <div>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Active Status</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{getSubtitle()}</p>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 text-left mt-1.5">{getSubtitle()}</p>
+
+            <div className={`relative flex items-center bg-slate-100 dark:bg-slate-700 rounded-full p-1 ${isLocked ? 'cursor-not-allowed opacity-70' : ''}`}>
+                {/* Sliding Background */}
+                <div
+                    className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] bg-slate-600 dark:bg-slate-900 shadow-sm rounded-full transition-transform duration-300 ease-in-out`}
+                    style={{ transform: isOnline ? 'translateX(100%)' : 'translateX(0)' }}
+                />
+                
+                {/* Buttons */}
+                <button
+                    onClick={() => handleStatusChange('Offline')}
+                    disabled={isLocked}
+                    className={`relative z-10 w-20 py-1.5 text-sm font-semibold rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-colors duration-300 ${
+                        !isOnline ? 'text-white' : 'text-slate-500 dark:text-slate-300'
+                    }`}
+                    aria-pressed={!isOnline}
+                >
+                    Offline
+                </button>
+                <button
+                    onClick={() => handleStatusChange('Available')}
+                    disabled={isLocked}
+                    className={`relative z-10 w-20 py-1.5 text-sm font-semibold rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-colors duration-300 ${
+                        isOnline ? 'text-white' : 'text-slate-500 dark:text-slate-300'
+                    }`}
+                    aria-pressed={isOnline}
+                >
+                    Online
+                </button>
+            </div>
         </div>
     );
 };

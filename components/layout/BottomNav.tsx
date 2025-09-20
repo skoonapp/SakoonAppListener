@@ -1,6 +1,7 @@
 import React from 'react';
-// FIX: Upgraded react-router-dom from v5 to v6 syntax. Replaced useRouteMatch with useResolvedPath and useMatch for v6 compatibility.
-import { Link, useResolvedPath, useMatch } from 'react-router-dom';
+// FIX: Split react-router-dom imports to resolve export errors. Core hooks are now imported from 'react-router' and DOM-specific components from 'react-router-dom'.
+import { useResolvedPath, useMatch } from 'react-router';
+import { Link } from 'react-router-dom';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: (active: boolean) => <IconDashboard active={active} /> },

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { db, functions, auth, rtdb } from '../../utils/firebase';
 import type { ListenerProfile, Application } from '../../types';
-import { Link, useNavigate } from 'react-router-dom';
+// FIX: Split react-router-dom imports to resolve export errors. Core hooks are now imported from 'react-router' and DOM-specific components from 'react-router-dom'.
+import { useNavigate } from 'react-router';
+import { Link } from 'react-router-dom';
 
 // --- Reusable Notification Banner ---
 const NotificationBanner: React.FC<{ message: string; type: 'error' | 'success'; onDismiss: () => void; }> = ({ message, type, onDismiss }) => {

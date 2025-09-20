@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../../utils/firebase';
-import { useNavigate } from 'react-router-dom';
+// FIX: Changed import from 'react-router-dom' to 'react-router' to resolve module export errors for hooks.
+import { useNavigate } from 'react-router';
 import { GuidelinesContent } from '../../components/profile/ListenerGuidelines';
 import { useListener } from '../../context/ListenerContext';
 import { TermsContent } from './TermsScreen';
