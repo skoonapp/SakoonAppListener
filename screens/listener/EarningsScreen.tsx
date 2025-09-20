@@ -128,11 +128,6 @@ const EarningsScreen: React.FC = () => {
 
     return (
         <div className="p-4 space-y-6 animate-fade-in">
-            <header>
-                <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-200">Earnings</h1>
-                <p className="text-slate-500 dark:text-slate-400">Your income overview and transaction history.</p>
-            </header>
-
             <div className="bg-gradient-to-br from-cyan-600 to-teal-500 text-white p-6 rounded-2xl shadow-lg flex items-center justify-between">
                 <div>
                     <p className="text-lg font-medium text-white/80">Total Earnings</p>
