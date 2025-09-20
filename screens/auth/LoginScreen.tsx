@@ -49,6 +49,11 @@ const LoginScreen: React.FC = () => {
   const [canResend, setCanResend] = useState(false);
 
   useEffect(() => {
+    // Set auth language to English for reCAPTCHA and other auth UI
+    auth.languageCode = 'en';
+  }, []);
+
+  useEffect(() => {
     let interval: number;
     if (step === 'otp' && resendTimer > 0 && !canResend) {
       interval = window.setInterval(() => {
@@ -73,13 +78,13 @@ const LoginScreen: React.FC = () => {
   useEffect(() => {
     // FIX: Corrected timer type from NodeJS.Timeout to number for browser environment.
     let messageTimer: number;
-    if (loading && (loadingMessage.startsWith('OTP भेजा'))) {
+    if (loading && (loadingMessage.startsWith('Sending'))) {
         const messages = [
-            "सुरक्षित कनेक्शन शुरू हो रहा है...",
-            "सुरक्षा जांच की जा रही है...",
-            `+91 ${phoneNumber} के लिए OTP का अनुरोध किया जा रहा है...`,
-            "SMS भेजा जा रहा है...",
-            "बस लगभग हो गया..."
+            "Initializing secure connection...",
+            "Running security checks...",
+            `Requesting OTP for +91 ${phoneNumber}...`,
+            "Sending SMS...",
+            "Almost there..."
         ];
         let messageIndex = 0;
         const showNextMessage = () => {
@@ -97,7 +102,7 @@ const LoginScreen: React.FC = () => {
   const sendOtp = async () => {
     setError('');
     if (phoneNumber.length !== 10) {
-      setError('कृपया एक मान्य 10-अंकीय मोबाइल नंबर दर्ज करें।');
+      setError('Please enter a valid 10-digit mobile number.');
       setLoading(false);
       return;
     }
@@ -117,13 +122,13 @@ const LoginScreen: React.FC = () => {
       setCanResend(false);
     } catch (err: any) {
       console.error("Error sending OTP:", err);
-      let errorMessage = 'OTP भेजने में विफल। कृपया अपना नंबर जांचें और पुनः प्रयास करें।';
+      let errorMessage = 'Failed to send OTP. Please check the number or try again later.';
       if (err.code === 'auth/too-many-requests') {
-        errorMessage = 'इस नंबर से बहुत ज़्यादा अनुरोध किए गए हैं। कृपया कुछ समय बाद पुनः प्रयास करें।';
+        errorMessage = 'Too many requests from this number. Please try again later.';
       } else if (err.code === 'auth/invalid-phone-number') {
-        errorMessage = 'यह एक अमान्य फ़ोन नंबर है। कृपया पुनः जांच करें।';
+        errorMessage = 'This is an invalid phone number. Please check again.';
       } else if (err.message.includes('reCAPTCHA')) {
-        errorMessage = 'reCAPTCHA सत्यापन में समस्या। कृपया पृष्ठ को रीफ़्रेश करें।';
+        errorMessage = 'Problem with reCAPTCHA verification. Please refresh the page.';
       }
       setError(errorMessage);
     } finally {
@@ -135,39 +140,39 @@ const LoginScreen: React.FC = () => {
   const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setLoadingMessage('OTP भेजा जा रहा है...');
+    setLoadingMessage('Sending OTP...');
     await sendOtp();
   };
   
   const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setLoadingMessage('OTP सत्यापित किया जा रहा है...');
+    setLoadingMessage('Verifying OTP...');
     setError('');
 
     if (!window.confirmationResult) {
-      setError('आपका OTP सत्र समाप्त हो गया है। कृपया वापस जाकर एक नया OTP अनुरोध करें।');
+      setError('Your OTP session has expired. Please go back and request a new one.');
       setLoading(false);
       setLoadingMessage('');
       return;
     }
 
     if (otp.length !== 6) {
-      setError('कृपया 6-अंकीय OTP दर्ज करें।');
+      setError('Please enter the 6-digit OTP.');
       setLoading(false);
       return;
     }
 
     try {
       await window.confirmationResult.confirm(otp);
-      setLoadingMessage('सफलतापूर्वक! लॉग इन किया जा रहा है...');
+      setLoadingMessage('Success! Logging you in...');
       // On success, App.tsx router will handle navigation.
       // We don't setLoading(false) to prevent flicker.
     } catch (err: any) {
       console.error("Error verifying OTP:", err);
-      let errorMessage = 'अमान्य OTP। कृपया कोड जांचें और पुनः प्रयास करें।';
+      let errorMessage = 'Invalid OTP. Please check the code and try again.';
       if (err.code === 'auth/session-expired') {
-          errorMessage = 'सत्यापन कोड समाप्त हो गया है। कृपया एक नया अनुरोध करें।';
+          errorMessage = 'The verification code has expired. Please request a new one.';
       }
       setError(errorMessage);
       setLoading(false);
@@ -179,7 +184,7 @@ const LoginScreen: React.FC = () => {
     if (!canResend || loading) return;
     
     setLoading(true);
-    setLoadingMessage('OTP फिर से भेजा जा रहा है...');
+    setLoadingMessage('Resending OTP...');
     await sendOtp();
   };
 
@@ -208,7 +213,7 @@ const LoginScreen: React.FC = () => {
                          type="tel" 
                          value={phoneNumber} 
                          onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, '').slice(0, 10))} 
-                         placeholder="📞 +91  मोबाइल नंबर"
+                         placeholder="📞 +91  Mobile Number"
                          className="w-full bg-white/10 border border-white/20 text-white placeholder-cyan-200/50 text-lg rounded-xl block p-3.5 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition-colors" 
                          required 
                          maxLength={10}
@@ -216,7 +221,7 @@ const LoginScreen: React.FC = () => {
                    </div>
                    <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3.5 rounded-xl transition-colors disabled:bg-cyan-800 disabled:cursor-not-allowed flex items-center justify-center">
                        {loading && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                       {loading ? loadingMessage : 'OTP पाएं'}
+                       {loading ? loadingMessage : 'Get OTP'}
                    </button>
                </form>
 
@@ -245,7 +250,7 @@ const LoginScreen: React.FC = () => {
           <>
             <div className="w-full bg-slate-800/50 backdrop-blur-sm border border-white/20 p-8 rounded-2xl">
               <div className="text-center mb-6">
-                <p className="text-slate-300">इस नंबर पर भेजा गया कोड दर्ज करें:</p>
+                <p className="text-slate-300">Enter the code sent to:</p>
                 <p className="font-bold text-white text-lg mt-1">+91 {phoneNumber}</p>
               </div>
               <form onSubmit={handleOtpSubmit} className="mb-4">
@@ -257,7 +262,7 @@ const LoginScreen: React.FC = () => {
                           type="tel"
                           value={otp}
                           onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
-                          placeholder="6-अंकीय OTP"
+                          placeholder="6-digit OTP"
                           className="w-full bg-white/10 border border-white/20 text-white placeholder-cyan-200/50 text-lg rounded-xl tracking-[0.5em] text-center p-3.5 focus:ring-cyan-400 focus:border-cyan-400 focus:outline-none transition-colors"
                           required
                           maxLength={6}
@@ -265,7 +270,7 @@ const LoginScreen: React.FC = () => {
                   </div>
                   <button type="submit" disabled={loading} className="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3.5 rounded-xl transition-colors disabled:bg-cyan-800 disabled:cursor-not-allowed flex items-center justify-center">
                        {loading && <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>}
-                       {loading ? loadingMessage : 'सत्यापित करें और लॉग इन करें'}
+                       {loading ? loadingMessage : 'Verify & Login'}
                   </button>
               </form>
               {error && <p className="text-red-300 bg-red-900/50 p-3 rounded-lg text-center mt-4 text-sm">{error}</p>}
@@ -273,13 +278,13 @@ const LoginScreen: React.FC = () => {
               <hr className="border-t border-white/10" />
               <div className="text-center pt-6">
                  {canResend ? (
-                     <button onClick={handleResendOtp} disabled={loading} className="text-sm text-cyan-200 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">OTP फिर से भेजें</button>
+                     <button onClick={handleResendOtp} disabled={loading} className="text-sm text-cyan-200 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed">Resend OTP</button>
                  ) : (
-                    <p className="text-sm text-slate-400">{resendTimer}s में OTP फिर से भेजें</p>
+                    <p className="text-sm text-slate-400">Resend OTP in {resendTimer}s</p>
                  )}
               </div>
               <button onClick={() => setStep('phone')} className="w-full text-center mt-6 text-sm text-slate-400 hover:text-cyan-200">
-                नंबर बदलें
+                Change Number
               </button>
             </div>
           </>
