@@ -65,8 +65,8 @@ const PayoutNotice: React.FC = () => {
     return (
         <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-4 rounded-xl shadow-lg flex items-center justify-between gap-4">
             <div className="flex-grow">
-                <h3 className="font-bold text-lg">{isTodayPayoutDay ? "✅ आज पेआउट का दिन है!" : "🗓️ अगला पेआउट शेड्यूल"}</h3>
-                <p className="text-sm">{isTodayPayoutDay ? "सुनिश्चित करें कि सभी गणनाएँ सत्यापित हैं।" : `पेआउट हर सोमवार को प्रोसेस किए जाते हैं। अगला पेआउट: ${nextPayoutDate.toLocaleDateString('hi-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</p>
+                <h3 className="font-bold text-lg">{isTodayPayoutDay ? "✅ Today is Payout Day!" : "🗓️ Next Payout Schedule"}</h3>
+                <p className="text-sm">{isTodayPayoutDay ? "Ensure all calculations are verified." : `Payouts are processed every Monday. Next Payout: ${nextPayoutDate.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`}</p>
             </div>
             <CalendarIcon />
         </div>
@@ -168,8 +168,8 @@ const AdminDashboardScreen: React.FC = () => {
     <div className="p-4 sm:p-6 space-y-8 bg-slate-100 dark:bg-slate-900 min-h-screen">
         <header className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
-                <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-200">एडमिन डैशबोर्ड</h1>
-                <p className="text-slate-500 dark:text-slate-400">आपका स्वागत है, एडमिन। यहाँ आपके व्यवसाय का पूरा अवलोकन है।</p>
+                <h1 className="text-3xl font-bold text-slate-800 dark:text-slate-200">Admin Dashboard</h1>
+                <p className="text-slate-500 dark:text-slate-400">Welcome, Admin. Here is a complete overview of your business.</p>
             </div>
              <button
                 onClick={handleLogout}
@@ -220,20 +220,20 @@ const AdminDashboardScreen: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* New Applications Table */}
             <div>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">ACTION REQUIRED: नए आवेदन</h3>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">ACTION REQUIRED: New Applications</h3>
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left text-slate-500 dark:text-slate-400">
                             <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-700 dark:text-slate-300">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3">आवेदक</th>
-                                    <th scope="col" className="px-6 py-3">पेशा</th>
-                                    <th scope="col" className="px-6 py-3 text-right">कार्रवाई</th>
+                                    <th scope="col" className="px-6 py-3">Applicant</th>
+                                    <th scope="col" className="px-6 py-3">Profession</th>
+                                    <th scope="col" className="px-6 py-3 text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan={3} className="text-center p-4">लोड हो रहा है...</td></tr>
+                                    <tr><td colSpan={3} className="text-center p-4">Loading...</td></tr>
                                 ) : applications.length > 0 ? (
                                     applications.map(app => (
                                         <tr key={app.id} className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
@@ -250,7 +250,7 @@ const AdminDashboardScreen: React.FC = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={3} className="text-center py-8">समीक्षा के लिए कोई नया आवेदन नहीं है।</td>
+                                        <td colSpan={3} className="text-center py-8">No new applications to review.</td>
                                     </tr>
                                 )}
                             </tbody>
@@ -261,20 +261,20 @@ const AdminDashboardScreen: React.FC = () => {
 
             {/* Pending Profile Completion Table */}
             <div>
-                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">INFORMATIONAL: प्रोफाइल पूर्णता बाकी</h3>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">INFORMATIONAL: Pending Profile Completion</h3>
                 <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left text-slate-500 dark:text-slate-400">
                              <thead className="text-xs text-slate-700 uppercase bg-slate-50 dark:bg-slate-700 dark:text-slate-300">
                                 <tr>
-                                    <th scope="col" className="px-6 py-3">नाम</th>
+                                    <th scope="col" className="px-6 py-3">Name</th>
                                     <th scope="col" className="px-6 py-3">Approved On</th>
                                     <th scope="col" className="px-6 py-3 text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {loading ? (
-                                    <tr><td colSpan={3} className="text-center p-4">लोड हो रहा है...</td></tr>
+                                    <tr><td colSpan={3} className="text-center p-4">Loading...</td></tr>
                                 ) : onboardingListeners.length > 0 ? (
                                     onboardingListeners.map(listener => (
                                         <tr key={listener.uid} className="bg-white dark:bg-slate-800 border-b dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
@@ -284,13 +284,13 @@ const AdminDashboardScreen: React.FC = () => {
                                             </th>
                                             <td className="px-6 py-4">{listener.createdAt?.toDate().toLocaleDateString() ?? 'N/A'}</td>
                                             <td className="px-6 py-4 text-right">
-                                                <button disabled className="font-medium text-slate-400 dark:text-slate-500 cursor-not-allowed">रिमाइंडर भेजें</button>
+                                                <button disabled className="font-medium text-slate-400 dark:text-slate-500 cursor-not-allowed">Send Reminder</button>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={3} className="text-center py-8">कोई भी लिसनर प्रोफाइल पूरा नहीं कर रहा है।</td>
+                                        <td colSpan={3} className="text-center py-8">No listeners are pending profile completion.</td>
                                     </tr>
                                 )}
                             </tbody>
