@@ -7,6 +7,7 @@ import firebase from 'firebase/compat/app';
 // Fix: Use ListenerAppStatus instead of the non-existent ListenerStatus.
 import type { CallRecord, ListenerChatSession, ListenerAppStatus } from '../../types';
 import InstallPWAButton from '../../components/common/InstallPWAButton';
+import { useNotification } from '../../context/NotificationContext';
 
 // Type definitions for combined activity feed
 // Fix: Use Omit to prevent type conflict on 'type' property from CallRecord.
@@ -94,6 +95,7 @@ const ActivityRow: React.FC<{ activity: Activity }> = ({ activity }) => {
 const StatusToggle: React.FC = () => {
     const { profile, loading: profileLoading } = useListener();
     const [optimisticStatus, setOptimisticStatus] = useState<ListenerAppStatus | null>(null);
+    const { showNotification } = useNotification();
 
     useEffect(() => {
         if (profile?.appStatus) {
@@ -119,7 +121,7 @@ const StatusToggle: React.FC = () => {
         } catch (error) {
             console.error("Failed to update status:", error);
             setOptimisticStatus(previousStatus);
-            alert("Failed to update status. Please check your connection and try again.");
+            showNotification("Failed to update status. Please check your connection and try again.", "error");
         }
     };
     

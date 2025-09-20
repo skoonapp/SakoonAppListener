@@ -1,14 +1,16 @@
 import React from 'react';
 import { auth } from '../../utils/firebase';
+import { useNotification } from '../../context/NotificationContext';
 
 const UnauthorizedScreen: React.FC = () => {
+  const { showNotification } = useNotification();
   const handleLogout = async () => {
     try {
       await auth.signOut();
       // The main App router will handle redirecting to the login screen.
     } catch (error) {
       console.error('Error signing out: ', error);
-      alert('Could not log out. Please try again.');
+      showNotification('Could not log out. Please try again.', 'error');
     }
   };
 
