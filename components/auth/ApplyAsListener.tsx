@@ -129,24 +129,13 @@ const ApplyAsListener: React.FC = () => {
         setError('');
 
         try {
-            // A client-side check to prevent obvious duplicates before writing to the database.
+            // NOTE: Removed client-side duplicate check. It was failing due to security rules
+            // because an unauthenticated user cannot query the 'applications' or 'listeners' collections.
+            // Duplicate checks should be handled by an admin or a backend function.
+
             const phone = formData.phone.trim();
-            const applicationsQuery = db.collection('applications').where('phone', '==', phone);
-            const listenersQuery = db.collection('listeners').where('phone', '==', phone);
-
-            const [applicationSnapshot, listenerSnapshot] = await Promise.all([
-                applicationsQuery.get(),
-                listenersQuery.get()
-            ]);
-
-            if (!applicationSnapshot.empty || !listenerSnapshot.empty) {
-                setError("इस फ़ोन नंबर से पहले ही एक आवेदन मौजूद है या कोई लिस्नर रजिस्टर्ड है।");
-                setLoading(false);
-                return;
-            }
-
-            // Bypassing the cloud function and writing directly to Firestore.
-            // This requires Firestore rules to allow unauthenticated creates on the 'applications' collection.
+            
+            // The security rule "allow create: if true" on the 'applications' collection permits this.
             await db.collection('applications').add({
                 ...formData,
                 phone: phone, // ensure no whitespace
