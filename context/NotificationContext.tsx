@@ -86,11 +86,19 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     <NotificationContext.Provider value={{ showNotification }}>
       {children}
       {notification.isVisible && (
-        <NotificationUI
-          message={notification.message}
-          type={notification.type}
-          onDismiss={dismissNotification}
-        />
+        <>
+          {/* This overlay allows dismissing the notification by clicking anywhere on the screen */}
+          <div 
+            className="fixed inset-0 z-[99] bg-black/10"
+            onClick={dismissNotification}
+            aria-hidden="true"
+          />
+          <NotificationUI
+            message={notification.message}
+            type={notification.type}
+            onDismiss={dismissNotification}
+          />
+        </>
       )}
     </NotificationContext.Provider>
   );
