@@ -29,14 +29,6 @@ const UnauthorizedScreen = lazy(() => import('./screens/auth/UnauthorizedScreen'
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'needs_onboarding' | 'pending_approval' | 'active' | 'admin' | 'unauthorized';
 
-const GuardedPage: React.FC<{user: firebase.User, children: React.ReactNode}> = ({ user, children }) => (
-    <ListenerProvider user={user}>
-        <MainLayout>
-            {children}
-        </MainLayout>
-    </ListenerProvider>
-);
-
 const App: React.FC = () => {
   const [user, setUser] = useState<firebase.User | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
@@ -108,50 +100,60 @@ const App: React.FC = () => {
       return <SplashScreen />;
   }
 
+  const routeContent = (
+    <Suspense fallback={<SplashScreen />}>
+      <Routes>
+          {authStatus === 'unauthenticated' && <>
+              <Route path="/login" element={<LoginScreen />} />
+              <Route path="*" element={<Navigate to="/login" replace />} />
+          </>}
+          {authStatus === 'needs_onboarding' && user && <>
+              <Route path="/onboarding" element={<OnboardingScreen user={user} />} />
+              <Route path="*" element={<Navigate to="/onboarding" replace />} />
+          </>}
+          {authStatus === 'pending_approval' && <>
+              <Route path="/pending-approval" element={<PendingApprovalScreen />} />
+              <Route path="*" element={<Navigate to="/pending-approval" replace />} />
+          </>}
+          {authStatus === 'admin' && <>
+              <Route path="/admin/listeners" element={<ListenerManagementScreen />} />
+              <Route path="/admin" element={<AdminDashboardScreen />} />
+              <Route path="*" element={<Navigate to="/admin" replace />} />
+          </>}
+          {authStatus === 'unauthorized' && <>
+              <Route path="/unauthorized" element={<UnauthorizedScreen />} />
+              <Route path="*" element={<Navigate to="/unauthorized" replace />} />
+          </>}
+          {authStatus === 'active' && user && (
+              <>
+                  <Route path="/call/:callId" element={<ActiveCallScreen />} />
+                  <Route path="/dashboard" element={<MainLayout><DashboardScreen /></MainLayout>} />
+                  <Route path="/calls" element={<MainLayout><CallsScreen /></MainLayout>} />
+                  <Route path="/chat" element={<MainLayout><ChatScreen /></MainLayout>} />
+                  <Route path="/earnings" element={<MainLayout><EarningsScreen /></MainLayout>} />
+                  <Route path="/profile" element={<MainLayout><ProfileScreen /></MainLayout>} />
+                  <Route path="/terms" element={<MainLayout><TermsScreen /></MainLayout>} />
+                  <Route path="/privacy" element={<MainLayout><PrivacyPolicyScreen /></MainLayout>} />
+                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
+              </>
+          )}
+           {/* Fallback for unhandled statuses or when conditions are not met */}
+           <Route path="*" element={<SplashScreen />} />
+      </Routes>
+    </Suspense>
+  );
+
   return (
     <NotificationProvider>
       <HashRouter>
-        <Suspense fallback={<SplashScreen />}>
-          <Routes>
-              {authStatus === 'unauthenticated' && <>
-                  <Route path="/login" element={<LoginScreen />} />
-                  <Route path="*" element={<Navigate to="/login" replace />} />
-              </>}
-              {authStatus === 'needs_onboarding' && user && <>
-                  <Route path="/onboarding" element={<OnboardingScreen user={user} />} />
-                  <Route path="*" element={<Navigate to="/onboarding" replace />} />
-              </>}
-              {authStatus === 'pending_approval' && <>
-                  <Route path="/pending-approval" element={<PendingApprovalScreen />} />
-                  <Route path="*" element={<Navigate to="/pending-approval" replace />} />
-              </>}
-              {authStatus === 'admin' && <>
-                  <Route path="/admin/listeners" element={<ListenerManagementScreen />} />
-                  <Route path="/admin" element={<AdminDashboardScreen />} />
-                  <Route path="*" element={<Navigate to="/admin" replace />} />
-              </>}
-              {authStatus === 'unauthorized' && <>
-                  <Route path="/unauthorized" element={<UnauthorizedScreen />} />
-                  <Route path="*" element={<Navigate to="/unauthorized" replace />} />
-              </>}
-              {authStatus === 'active' && user && (
-                  <>
-                      <Route path="/call/:callId" element={<ListenerProvider user={user}><ActiveCallScreen /></ListenerProvider>} />
-                      <Route path="/dashboard" element={<GuardedPage user={user}><DashboardScreen /></GuardedPage>} />
-                      <Route path="/calls" element={<GuardedPage user={user}><CallsScreen /></GuardedPage>} />
-                      <Route path="/chat" element={<GuardedPage user={user}><ChatScreen /></GuardedPage>} />
-                      <Route path="/earnings" element={<GuardedPage user={user}><EarningsScreen /></GuardedPage>} />
-                      <Route path="/profile" element={<GuardedPage user={user}><ProfileScreen /></GuardedPage>} />
-                      <Route path="/terms" element={<GuardedPage user={user}><TermsScreen /></GuardedPage>} />
-                      <Route path="/privacy" element={<GuardedPage user={user}><PrivacyPolicyScreen /></GuardedPage>} />
-                      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                  </>
-              )}
-               {/* Fallback for unhandled statuses or when conditions are not met */}
-               <Route path="*" element={<SplashScreen />} />
-          </Routes>
-        </Suspense>
+        {user ? (
+          <ListenerProvider user={user}>
+            {routeContent}
+          </ListenerProvider>
+        ) : (
+          routeContent
+        )}
       </HashRouter>
     </NotificationProvider>
   );
