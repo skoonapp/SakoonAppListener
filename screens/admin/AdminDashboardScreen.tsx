@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { db, functions, auth, rtdb } from '../../utils/firebase';
 import type { ListenerProfile, Application } from '../../types';
-// FIX: Split react-router-dom imports to resolve export errors. Core hooks are now imported from 'react-router' and DOM-specific components from 'react-router-dom'.
 import { useNavigate } from 'react-router';
 import { Link } from 'react-router-dom';
 
@@ -79,6 +78,7 @@ const AdminDashboardScreen: React.FC = () => {
   const [onboardingListeners, setOnboardingListeners] = useState<ListenerProfile[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(true);
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const navigate = useNavigate();
@@ -111,25 +111,57 @@ const AdminDashboardScreen: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
+    setStatsLoading(true);
 
-    const fetchAllData = async () => {
-        try {
-            const getStats = functions.httpsCallable('getAdminDashboardStats');
-            const result = await getStats();
-            setStats(result.data);
-        } catch (error) {
-            console.error("Error fetching dashboard stats:", error);
-            setNotification({ message: 'Failed to load dashboard statistics.', type: 'error' });
-        }
+    const fetchStats = async () => {
+      try {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        // --- Parallel fetching for performance ---
+        const [
+          activeListenersSnap,
+          todayCallsSnap,
+          activeCallsSnap,
+        ] = await Promise.all([
+          db.collection('listeners').where('status', '==', 'active').get(),
+          db.collection('calls').where('startTime', '>=', startOfToday).get(),
+          db.collection('calls').where('status', '==', 'active').get(),
+        ]);
+        
+        const dailyRevenue = todayCallsSnap.docs
+          .filter(doc => doc.data().status === 'completed')
+          .reduce((sum, doc) => sum + (doc.data().earnings || 0), 0);
+        
+        const dailyTransactions = todayCallsSnap.docs
+            .filter(doc => doc.data().status === 'completed').length;
+        
+        setStats({
+          activeListeners: activeListenersSnap.size,
+          dailyRevenue: dailyRevenue.toFixed(2),
+          dailyProfit: 'N/A', // Profit calculation is complex
+          dailyTransactions: dailyTransactions,
+          activeCallsNow: activeCallsSnap.size,
+          activeChatsNow: 'N/A', // Not easily trackable
+        });
+
+      } catch (error) {
+        console.error("Error fetching dashboard stats:", error);
+        setNotification({ message: 'Failed to load some statistics.', type: 'error' });
+      } finally {
+        setStatsLoading(false);
+      }
     };
-    fetchAllData();
+    
+    fetchStats();
 
     const unsubApplications = db.collection('applications').where('status', 'not-in', ['approved', 'rejected'])
       .onSnapshot(snapshot => {
         setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application)));
-        setLoading(false); // Stop loading after first fetch
+        setLoading(false); // Tables are now loaded
       }, (err) => {
         setNotification({ message: 'Failed to load new applications.', type: 'error' });
+        setLoading(false);
       });
       
     const unsubOnboarding = db.collection('listeners').where('status', '==', 'onboarding_required')
@@ -188,7 +220,7 @@ const AdminDashboardScreen: React.FC = () => {
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Main Dashboard Overview</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard title="Listeners Online" value={onlineCount} icon={<OnlineIcon />} loading={false} />
-                <StatCard title="Active Listeners" value={stats?.activeListeners ?? '...'} icon={<UserCheckIcon />} loading={!stats} />
+                <StatCard title="Active Listeners" value={stats?.activeListeners ?? '...'} icon={<UserCheckIcon />} loading={statsLoading} />
                 <StatCard title="New Applications" value={applications.length} icon={<NewApplicationIcon />} loading={loading} />
                 <StatCard title="Pending Onboarding" value={onboardingListeners.length} icon={<UserClockIcon />} loading={loading} />
             </div>
@@ -198,22 +230,11 @@ const AdminDashboardScreen: React.FC = () => {
         <div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Daily Performance</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <StatCard title="Today's Revenue" value={`₹${stats?.dailyRevenue ?? '...'}`} icon={<RupeeIcon />} loading={!stats} />
-                <StatCard title="Today's Profit" value={`₹${stats?.dailyProfit ?? '...'}`} icon={<ProfitIcon />} loading={!stats} />
-                <StatCard title="Today's Transactions" value={stats?.dailyTransactions ?? '...'} icon={<TransactionIcon />} loading={!stats} />
-                <StatCard title="Active Calls Now" value={stats?.activeCallsNow ?? '...'} icon={<PhoneIcon />} loading={!stats} />
-                <StatCard title="Active Chats Now" value={stats?.activeChatsNow ?? '...'} icon={<ChatIcon />} loading={!stats} />
-            </div>
-        </div>
-        
-        {/* Advanced Analytics Grid */}
-        <div>
-            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Advanced Analytics</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Total Revenue" value={`₹${stats?.totalRevenue ?? '...'}`} icon={<RupeeIcon />} loading={!stats} />
-                <StatCard title="Top Earner (Week)" value={`...`} icon={<RupeeIcon />} loading={!stats} />
-                <StatCard title="Most Active (Week)" value={`...`} icon={<UserCheckIcon />} loading={!stats} />
-                <StatCard title="Peak Call Time" value={`...`} icon={<PhoneIcon />} loading={!stats} />
+                <StatCard title="Today's Revenue" value={`₹${stats?.dailyRevenue ?? '...'}`} icon={<RupeeIcon />} loading={statsLoading} />
+                <StatCard title="Today's Profit" value={`${stats?.dailyProfit ?? '...'}`} icon={<ProfitIcon />} loading={statsLoading} />
+                <StatCard title="Today's Transactions" value={stats?.dailyTransactions ?? '...'} icon={<TransactionIcon />} loading={statsLoading} />
+                <StatCard title="Active Calls Now" value={stats?.activeCallsNow ?? '...'} icon={<PhoneIcon />} loading={statsLoading} />
+                <StatCard title="Active Chats Now" value={`${stats?.activeChatsNow ?? '...'}`} icon={<ChatIcon />} loading={statsLoading} />
             </div>
         </div>
 
