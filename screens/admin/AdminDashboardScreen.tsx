@@ -185,20 +185,22 @@ const AdminDashboardScreen: React.FC = () => {
     };
   }, []);
 
-  const handleApplicationAction = async (applicationId: string, action: 'approve' | 'reject') => {
-    if (!applicationId) return;
+  const handleApplicationAction = async (application: Application, action: 'approve' | 'reject') => {
+    if (!application.id) return;
     const confirmationText = action === 'approve'
-      ? 'Are you sure you want to approve this application? This will create a listener account and ask them to complete their profile.'
-      : 'Are you sure you want to reject this application?';
+      ? `Are you sure you want to approve this application for ${application.displayName}? This will create a listener account and ask them to complete their profile.`
+      : `Are you sure you want to reject this application for ${application.displayName}?`;
     if (!window.confirm(confirmationText)) return;
 
     const functionName = action === 'approve' ? 'approveApplication' : 'rejectApplication';
     try {
         const callable = functions.httpsCallable(functionName);
-        await callable({ applicationId });
+        // Pass the entire application object. The Firebase SDK will handle serializing the Timestamp.
+        // The cloud function will receive all application data, including the ID as `id`.
+        await callable(application);
         setNotification({ message: `Application successfully ${action}d.`, type: 'success' });
     } catch (error: any) {
-        console.error(`Error ${action}ing application:`, error);
+        console.error(`Error ${action}ing application for ${application.displayName} (${application.id}):`, error);
         setNotification({ message: `Failed to ${action} application: ${error.message}`, type: 'error' });
     }
   };
@@ -272,8 +274,8 @@ const AdminDashboardScreen: React.FC = () => {
                                             </th>
                                             <td className="px-6 py-4 capitalize">{app.profession}</td>
                                             <td className="px-6 py-4 text-right space-x-2">
-                                                <button onClick={() => handleApplicationAction(app.id, 'approve')} className="font-medium text-green-600 dark:text-green-500 hover:underline">Approve</button>
-                                                <button onClick={() => handleApplicationAction(app.id, 'reject')} className="font-medium text-red-600 dark:text-red-500 hover:underline">Reject</button>
+                                                <button onClick={() => handleApplicationAction(app, 'approve')} className="font-medium text-green-600 dark:text-green-500 hover:underline">Approve</button>
+                                                <button onClick={() => handleApplicationAction(app, 'reject')} className="font-medium text-red-600 dark:text-red-500 hover:underline">Reject</button>
                                             </td>
                                         </tr>
                                     ))
