@@ -124,7 +124,7 @@ const AdminDashboardScreen: React.FC = () => {
     };
     fetchAllData();
 
-    const unsubApplications = db.collection('applications').where('status', '==', 'pending')
+    const unsubApplications = db.collection('applications').where('status', 'not-in', ['approved', 'rejected'])
       .onSnapshot(snapshot => {
         setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application)));
         setLoading(false); // Stop loading after first fetch
