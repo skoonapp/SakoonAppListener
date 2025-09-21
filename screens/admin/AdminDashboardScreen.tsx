@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import firebase from 'firebase/compat/app';
 import { db, functions, auth, rtdb } from '../../utils/firebase';
 import type { ListenerProfile, Application } from '../../types';
 import { useNavigate } from 'react-router';
@@ -155,20 +156,19 @@ const AdminDashboardScreen: React.FC = () => {
     
     fetchStats();
 
-    // This query is more robust. It fetches the 50 most recent applications
-    // ordered by creation date and then filters them on the client. This correctly handles
-    // documents that might be missing the 'status' field (e.g., from the user app),
-    // which a 'where("status", "not-in", ...)' query would otherwise miss.
+    // FINAL FIX: This query is the most robust. It orders by document ID, which is always present,
+    // ensuring that all recent applications are fetched, regardless of whether fields like
+    // 'createdAt' or 'status' were included upon creation.
     const unsubApplications = db.collection('applications')
-      .orderBy('createdAt', 'desc')
+      .orderBy(firebase.firestore.FieldPath.documentId(), 'desc')
       .limit(50)
       .onSnapshot(snapshot => {
         const allRecentApps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
-        // Filter out applications that have already been processed.
+        // Filter out applications that have already been processed on the client.
         const pendingApps = allRecentApps.filter(app => app.status !== 'approved' && app.status !== 'rejected');
         
         setApplications(pendingApps);
-        setLoading(false); // Tables are now loaded
+        setLoading(false);
       }, (err) => {
         setNotification({ message: 'Failed to load new applications. Check Firestore rules.', type: 'error' });
         console.error("Error fetching applications:", err);
