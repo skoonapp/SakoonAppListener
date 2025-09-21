@@ -19,56 +19,35 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const location = useLocation();
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
-  const touchEndX = useRef(0);
-  
-  // This ref is used to lock a gesture as "scrolling" to prevent swipe actions.
-  const isScrolling = useRef(false);
 
   const MIN_SWIPE_DISTANCE = 50; // Minimum horizontal distance for a swipe.
-  const GESTURE_AXIS_LOCK_THRESHOLD = 10; // Pixels to move before deciding if it's a scroll or swipe.
 
   const handleTouchStart = (e: React.TouchEvent) => {
-    // Reset coordinates and scroll lock for the new gesture.
+    // Record the starting coordinates of the touch.
     touchStartX.current = e.targetTouches[0].clientX;
     touchStartY.current = e.targetTouches[0].clientY;
-    touchEndX.current = e.targetTouches[0].clientX;
-    isScrolling.current = false;
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    // If we've already determined this is a vertical scroll, do nothing further.
-    // This allows the browser to handle the native scrolling behavior without interference.
-    if (isScrolling.current) return;
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    // Get the final coordinates when the touch ends.
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
 
-    // Always update the end X coordinate for the final swipe check.
-    touchEndX.current = e.targetTouches[0].clientX;
-    
-    const deltaX = Math.abs(e.targetTouches[0].clientX - touchStartX.current);
-    const deltaY = Math.abs(e.targetTouches[0].clientY - touchStartY.current);
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
 
-    // Only decide the gesture's axis after a small initial movement.
-    if (deltaX > GESTURE_AXIS_LOCK_THRESHOLD || deltaY > GESTURE_AXIS_LOCK_THRESHOLD) {
-      // If vertical movement is greater than horizontal, lock this gesture as a scroll.
-      if (deltaY > deltaX) {
-        isScrolling.current = true;
-      }
-    }
-  };
-
-  const handleTouchEnd = () => {
-    // If the gesture was locked as a vertical scroll, do not attempt to navigate.
-    if (isScrolling.current) {
+    // First, determine if the gesture was primarily horizontal or vertical.
+    // If vertical movement is greater than horizontal, it's a scroll, so we do nothing.
+    if (Math.abs(deltaX) <= Math.abs(deltaY)) {
       return;
     }
 
-    const deltaX = touchEndX.current - touchStartX.current;
-
-    // If it wasn't a scroll, check if the horizontal movement was significant enough to be a swipe.
+    // If the gesture was horizontal, check if it was long enough to be a swipe.
     if (Math.abs(deltaX) > MIN_SWIPE_DISTANCE) {
       const currentPath = location.pathname;
       const currentIndex = swipeablePaths.indexOf(currentPath);
       
-      if (currentIndex === -1) return;
+      if (currentIndex === -1) return; // Not a swipeable page
       
       if (deltaX < 0) { // Swiped left
         if (currentIndex < swipeablePaths.length - 1) {
@@ -88,7 +67,6 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       <main 
         className="flex-grow pt-14 pb-16 overflow-y-auto overscroll-y-contain bg-slate-50 dark:bg-slate-950"
         onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         {children}
