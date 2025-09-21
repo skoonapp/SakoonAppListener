@@ -192,13 +192,9 @@ const AdminDashboardScreen: React.FC = () => {
       : `Are you sure you want to reject this application for ${application.displayName}?`;
     if (!window.confirm(confirmationText)) return;
 
-    const functionName = action === 'approve' ? 'approveApplication' : 'rejectApplication';
+    const functionName = action === 'approve' ? 'listener_approveApplication' : 'listener_rejectApplication';
     try {
         const callable = functions.httpsCallable(functionName);
-        // FIX: Pass the entire application object instead of just the ID.
-        // An "internal" error often suggests a backend failure, which can be caused by
-        // the function not receiving all the data it expects. This change makes the
-        // client-side call more robust to backend requirements.
         await callable(application);
         setNotification({ message: `Application successfully ${action}d.`, type: 'success' });
     } catch (error: any) {

@@ -134,7 +134,7 @@ const ApplyAsListener: React.FC = () => {
         try {
             // Use the secure backend function to submit the application.
             // This ensures validation, security, and proper data handling.
-            const submitApp = functions.httpsCallable('submitListenerApplication');
+            const submitApp = functions.httpsCallable('listener_submitListenerApplication');
             const result = await submitApp(formData);
             
             if (result.data.success) {
