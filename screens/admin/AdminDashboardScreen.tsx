@@ -195,9 +195,11 @@ const AdminDashboardScreen: React.FC = () => {
     const functionName = action === 'approve' ? 'approveApplication' : 'rejectApplication';
     try {
         const callable = functions.httpsCallable(functionName);
-        // The cloud function expects an object with an `applicationId` property.
-        // We pass the ID of the application document to be processed.
-        await callable({ applicationId: application.id });
+        // FIX: Pass the entire application object instead of just the ID.
+        // An "internal" error often suggests a backend failure, which can be caused by
+        // the function not receiving all the data it expects. This change makes the
+        // client-side call more robust to backend requirements.
+        await callable(application);
         setNotification({ message: `Application successfully ${action}d.`, type: 'success' });
     } catch (error: any) {
         console.error(`Error ${action}ing application for ${application.displayName} (${application.id}):`, error);
