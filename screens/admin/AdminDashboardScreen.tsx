@@ -155,12 +155,23 @@ const AdminDashboardScreen: React.FC = () => {
     
     fetchStats();
 
-    const unsubApplications = db.collection('applications').where('status', 'not-in', ['approved', 'rejected'])
+    // This query is more robust. It fetches the 50 most recent applications
+    // ordered by creation date and then filters them on the client. This correctly handles
+    // documents that might be missing the 'status' field (e.g., from the user app),
+    // which a 'where("status", "not-in", ...)' query would otherwise miss.
+    const unsubApplications = db.collection('applications')
+      .orderBy('createdAt', 'desc')
+      .limit(50)
       .onSnapshot(snapshot => {
-        setApplications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application)));
+        const allRecentApps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
+        // Filter out applications that have already been processed.
+        const pendingApps = allRecentApps.filter(app => app.status !== 'approved' && app.status !== 'rejected');
+        
+        setApplications(pendingApps);
         setLoading(false); // Tables are now loaded
       }, (err) => {
-        setNotification({ message: 'Failed to load new applications.', type: 'error' });
+        setNotification({ message: 'Failed to load new applications. Check Firestore rules.', type: 'error' });
+        console.error("Error fetching applications:", err);
         setLoading(false);
       });
       
