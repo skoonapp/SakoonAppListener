@@ -10,8 +10,7 @@
 html, body, #root {
   height: 100%;
   width: 100%;
-  overflow: hidden;
-  position: fixed;
+  /* Let the browser handle scrolling, but prevent pull-to-refresh */
   overscroll-behavior: none;
 }
 

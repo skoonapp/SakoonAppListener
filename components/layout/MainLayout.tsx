@@ -62,10 +62,10 @@ const MainLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 overflow-hidden">
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950">
       <Header />
       <main 
-        className="flex-grow pt-14 pb-16 overflow-y-auto overscroll-y-contain bg-slate-50 dark:bg-slate-950"
+        className="flex-grow pt-14 pb-16 bg-slate-50 dark:bg-slate-950"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
