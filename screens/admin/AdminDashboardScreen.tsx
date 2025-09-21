@@ -156,21 +156,18 @@ const AdminDashboardScreen: React.FC = () => {
     
     fetchStats();
 
-    // FINAL FIX: This query is the most robust. It orders by document ID, which is always present,
-    // ensuring that all recent applications are fetched, regardless of whether fields like
-    // 'createdAt' or 'status' were included upon creation.
+    // More efficient query to only fetch applications with 'pending' status.
+    // This requires a composite index on (status, createdAt desc) in Firestore.
+    // Firebase will log a link in the console to create this index if it's missing.
     const unsubApplications = db.collection('applications')
-      .orderBy(firebase.firestore.FieldPath.documentId(), 'desc')
-      .limit(50)
+      .where('status', '==', 'pending')
+      .orderBy('createdAt', 'desc')
       .onSnapshot(snapshot => {
-        const allRecentApps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
-        // Filter out applications that have already been processed on the client.
-        const pendingApps = allRecentApps.filter(app => app.status !== 'approved' && app.status !== 'rejected');
-        
+        const pendingApps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
         setApplications(pendingApps);
         setLoading(false);
       }, (err) => {
-        setNotification({ message: 'Failed to load new applications. Check Firestore rules.', type: 'error' });
+        setNotification({ message: 'Failed to load new applications. Check Firestore rules and indexes.', type: 'error' });
         console.error("Error fetching applications:", err);
         setLoading(false);
       });
