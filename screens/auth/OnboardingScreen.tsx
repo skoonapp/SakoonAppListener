@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, useEffect } from 'react';
 // FIX: Changed import from 'react-router-dom' to 'react-router' to resolve module export errors for hooks.
 import { useNavigate } from 'react-router';
@@ -65,20 +61,21 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ user }) => {
     setLoading(true);
     setError(null);
     try {
-      // The backend trigger will automatically change the status from 'onboarding_required' to 'active'
-      // once 'onboardingComplete' is set to true.
+      // Upon completing onboarding, update the profile details and, crucially,
+      // set the status to 'pending' for final admin review.
       const listenerUpdate = {
         avatarUrl: formData.selectedAvatar,
         city: formData.city,
         age: parseInt(formData.age, 10),
         onboardingComplete: true,
+        status: 'pending', // This is the key change to fix the loop.
       };
 
       await db.collection('listeners').doc(user.uid).update(listenerUpdate);
       
-      // Since the status change is now automatic on the backend, we can optimistically redirect.
-      // The App.tsx router will pick up the 'active' status on the next load.
-      // For a brief moment, they might see the pending screen if redirection is faster than the backend trigger.
+      // The router in App.tsx will now pick up the 'pending' status and show the correct screen.
+      // We don't need to navigate here, as the state change in App.tsx will handle it.
+      // However, a direct navigate provides a faster user experience.
       navigate('/pending-approval', { replace: true });
 
     } catch (err) {
