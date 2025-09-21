@@ -195,9 +195,9 @@ const AdminDashboardScreen: React.FC = () => {
     const functionName = action === 'approve' ? 'approveApplication' : 'rejectApplication';
     try {
         const callable = functions.httpsCallable(functionName);
-        // Pass the entire application object. The Firebase SDK will handle serializing the Timestamp.
-        // The cloud function will receive all application data, including the ID as `id`.
-        await callable(application);
+        // The cloud function expects an object with an `applicationId` property.
+        // We pass the ID of the application document to be processed.
+        await callable({ applicationId: application.id });
         setNotification({ message: `Application successfully ${action}d.`, type: 'success' });
     } catch (error: any) {
         console.error(`Error ${action}ing application for ${application.displayName} (${application.id}):`, error);
