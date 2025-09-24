@@ -38,49 +38,18 @@ export { updateMyProfile };
 // LISTENER-SIDE FUNCTIONS (आपके मौजूदा स्ट्रक्चर से)
 // ===================================================================================
 
-// Listener Application और Approval से जुड़े फ़ंक्शंस (RENAMED)
+// Listener Application और Approval से जुड़े फ़ंक्शंस
 export { listener_approveApplication } from './listener/approveApplication';
 export { listener_rejectApplication } from './listener/rejectApplication';
 export { listener_submitListenerApplication } from './listener/submitListenerApplication';
 
-// Listener Auth (जैसे अकाउंट डिलीट होने पर) और Admin Management से जुड़े फ़ंक्शंस (RENAMED)
+// Listener Auth (जैसे अकाउंट डिलीट होने पर) और Admin Management से जुड़े फ़ंक्शंस
 export { onDeleteListener } from './listener/onDeleteListener';
 export { listener_setAdminRole } from './listener/setAdminRole';
 
-
-// Listener Availability (Online/Offline/Busy) से जुड़े फ़ंक्शंस
-// export * from "./availability"; // updateListenerAvailability
-
-// Listener Dashboard डेटा से जुड़े फ़ंक्शंस
-// export * from "./listener/dashboard"; // getDashboardData
-
-// Listener Earnings से जुड़े फ़ंक्शंस
-// export * from "./listener/addEarning"; // onCallComplete
-// export * from "./listener/earnings"; // getEarningsSummary
-
-// Push Notifications भेजने वाले फ़ंक्शंस
-// export * from "./notifications"; // sendCallNotification
-
-
 // ===================================================================================
-// ADMIN-SIDE FUNCTIONS (आपके मौजूदा स्ट्रक्चर से)
+// COMMON UTILITY FUNCTIONS
 // ===================================================================================
-
-// export * from "./admin/auth";
-// export * from "./admin/dashboard";
-// export * from "./admin/manageListeners";
-// export * from "./admin/manageUsers";
-
-// ===================================================================================
-// COMMON APIs & WEBHOOKS (आपके मौजूदा स्ट्रक्चर से)
-// ===================================================================================
-
-// Common Utilities और API फ़ंक्शंस
-// export * from "./common/api";
-// export * from "./common/gemini";
 
 // ZegoCloud utility function (common में बनाया गया)
 export { generateZegoToken as generateZegoTokenUtility } from "./common/zegocloud";
-
-// ZegoCloud (Video/Audio Call) से जुड़े पुराने फ़ंक्शंस (अगर इस्तेमाल हो रहे हैं)
-// export * from "./zego";
