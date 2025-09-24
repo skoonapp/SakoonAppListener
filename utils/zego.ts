@@ -21,7 +21,9 @@ export const fetchZegoToken = async (roomId: string): Promise<string> => {
             throw new Error("User not logged in.");
         }
 
-        const generateToken = httpsCallable(functions, 'generateZegoToken');
+        // FIX: Called the correct, simplified cloud function for utility token generation.
+        // The 'generateZegoToken' function is for the end-user app and has different logic.
+        const generateToken = httpsCallable(functions, 'generateZegoTokenUtility');
         const result = await generateToken({ roomId });
 
         // The httpsCallable result has the data inside a `data` property.
@@ -34,8 +36,10 @@ export const fetchZegoToken = async (roomId: string): Promise<string> => {
 
         return token;
 
-    } catch (error) {
-        console.error("Failed to fetch Zego token using httpsCallable:", error);
-        throw new Error("Could not create a secure session. Please try again.");
+    } catch (error: any) {
+        console.error("Failed to fetch Zego token:", error);
+        // HttpsCallable errors have a `message` property with the specific reason from the backend
+        const errorMessage = error.message || "Could not create a secure session. Please try again.";
+        throw new Error(errorMessage);
     }
 };
