@@ -25,7 +25,6 @@ const PendingApprovalScreen = lazy(() => import('./screens/auth/PendingApprovalS
 const AdminDashboardScreen = lazy(() => import('./screens/admin/AdminDashboardScreen'));
 const ListenerManagementScreen = lazy(() => import('./screens/admin/ListenerManagementScreen'));
 const UnauthorizedScreen = lazy(() => import('./screens/auth/UnauthorizedScreen'));
-const TestScreen = lazy(() => import('./screens/admin/TestScreen'));
 
 type AuthStatus = 'loading' | 'unauthenticated' | 'needs_onboarding' | 'pending_approval' | 'active' | 'admin' | 'unauthorized';
 
@@ -46,7 +45,6 @@ const AuthenticatedApp: React.FC<{ user: firebase.User; authStatus: AuthStatus }
         </>}
         {authStatus === 'admin' && <>
           <Route path="/admin/listeners" element={<ListenerManagementScreen />} />
-          <Route path="/admin/test" element={<TestScreen />} />
           <Route path="/admin" element={<AdminDashboardScreen />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </>}

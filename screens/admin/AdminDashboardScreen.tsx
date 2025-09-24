@@ -334,9 +334,6 @@ const AdminDashboardScreen: React.FC = () => {
              <Link to="/admin/listeners" className="inline-block bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-8 rounded-lg transition-colors shadow-lg">
                 Manage All Listeners
             </Link>
-            <Link to="/admin/test" className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-lg transition-colors shadow-lg ml-4">
-                Test Zego Token
-            </Link>
         </div>
     </div>
   );
