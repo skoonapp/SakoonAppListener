@@ -158,8 +158,6 @@ const AdminDashboardScreen: React.FC = () => {
     fetchStats();
 
     // More efficient query to only fetch applications with 'pending' status.
-    // This requires a composite index on (status, createdAt desc) in Firestore.
-    // Firebase will log a link in the console to create this index if it's missing.
     const unsubApplications = db.collection('applications')
       .where('status', '==', 'pending')
       .orderBy('createdAt', 'desc')
@@ -167,17 +165,26 @@ const AdminDashboardScreen: React.FC = () => {
         const pendingApps = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Application));
         setApplications(pendingApps);
         setLoading(false);
-      }, (err) => {
-        setNotification({ message: 'Failed to load new applications. Check Firestore rules and indexes.', type: 'error' });
+      }, (err: any) => {
         console.error("Error fetching applications:", err);
+        let detailedMessage = 'Failed to load new applications.';
+        if (err.message && err.message.includes('firestore/indexes')) {
+            detailedMessage += ' A Firestore index is required. Please check the browser console for a link to create it.';
+        }
+        setNotification({ message: detailedMessage, type: 'error' });
         setLoading(false);
       });
       
     const unsubOnboarding = db.collection('listeners').where('status', '==', 'onboarding_required')
       .onSnapshot(snapshot => {
         setOnboardingListeners(snapshot.docs.map(doc => doc.data() as ListenerProfile));
-      }, (err) => {
-        setNotification({ message: 'Failed to load onboarding listeners.', type: 'error' });
+      }, (err: any) => {
+        console.error("Error fetching onboarding listeners:", err);
+        let detailedMessage = 'Failed to load onboarding listeners.';
+        if (err.message && err.message.includes('firestore/indexes')) {
+            detailedMessage += ' A Firestore index is required for this query. Please check the browser console for a link to create it.';
+        }
+        setNotification({ message: detailedMessage, type: 'error' });
       });
 
     return () => {
