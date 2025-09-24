@@ -43,26 +43,51 @@ const StatCard: React.FC<{ title: string; value: string; loading: boolean; icon:
     </div>
 );
 
-const TransactionRow: React.FC<{ transaction: EarningRecord }> = ({ transaction }) => (
-    <div className="flex items-center justify-between py-4">
-        <div className="flex items-center gap-3">
+const TransactionRow: React.FC<{ transaction: EarningRecord }> = ({ transaction }) => {
+    const isBonus = transaction.type === 'bonus';
+
+    const getIcon = () => {
+        if (isBonus) {
+            return (
+                <div className="w-10 h-10 rounded-full bg-yellow-100 dark:bg-yellow-900/50 flex items-center justify-center">
+                    <StarIcon />
+                </div>
+            );
+        }
+        // Default to call icon for 'call' or 'chat_session'
+        return (
             <div className="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center">
                 <CallIcon />
             </div>
-            <div>
-                <p className="font-semibold text-slate-700 dark:text-slate-300">Call with {transaction.userName}</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                    {transaction.timestamp.toDate().toLocaleString('en-IN', {
-                        day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit'
-                    })}
-                </p>
+        );
+    };
+
+    const getTitle = () => {
+        if (isBonus) return `Follow-up Bonus`;
+        if (transaction.type === 'chat_session') return `Chat with ${transaction.userName}`;
+        return `Call with ${transaction.userName}`;
+    };
+
+    return (
+        <div className="flex items-center justify-between py-4">
+            <div className="flex items-center gap-3">
+                {getIcon()}
+                <div>
+                    <p className="font-semibold text-slate-700 dark:text-slate-300">{getTitle()}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                        {transaction.timestamp.toDate().toLocaleString('en-IN', {
+                            day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit'
+                        })}
+                    </p>
+                </div>
             </div>
+            <p className="font-bold text-green-600 dark:text-green-400 text-lg">
+                +₹{Number(transaction.amount).toFixed(2)}
+            </p>
         </div>
-        <p className="font-bold text-green-600 dark:text-green-400 text-lg">
-            +₹{Number(transaction.amount).toFixed(2)}
-        </p>
-    </div>
-);
+    );
+};
+
 
 const EarningsScreen: React.FC = () => {
     const { profile } = useListener();

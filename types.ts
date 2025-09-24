@@ -66,6 +66,7 @@ export interface CallRecord {
   status: 'pending' | 'ringing' | 'active' | 'completed' | 'missed' | 'rejected' | 'cancelled';
   earnings?: number;
   type?: 'call'; // for activity feed
+  bonusAwarded?: boolean; // To track if a follow-up bonus was given
 }
 
 // Represents a chat session between a listener and a user.
@@ -98,7 +99,7 @@ export interface EarningRecord {
     id: string;
     amount: number;
     timestamp: firebase.firestore.Timestamp;
-    type: 'call' | 'chat_session'; // Source of the earning
+    type: 'call' | 'chat_session' | 'bonus'; // Source of the earning
     sourceId: string; // callId or chatId
     userName: string;
 }

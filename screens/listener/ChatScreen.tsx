@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useListener } from '../../context/ListenerContext';
 import { db, storage } from '../../utils/firebase';
-import type { ListenerChatSession, ChatMessage } from '../../types';
+import type { ListenerChatSession, ChatMessage, CallRecord } from '../../types';
 import MessageBubble from '../../components/chat/MessageBubble';
 import ChatInput from '../../components/chat/ChatInput';
 import firebase from 'firebase/compat/app';
+import { useNotification } from '../../context/NotificationContext';
 
 const formatSessionTime = (timestamp: firebase.firestore.Timestamp | undefined): string => {
     if (!timestamp) return '';
@@ -32,6 +33,7 @@ const ChatScreen: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [loading, setLoading] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const { showNotification } = useNotification();
 
     // Fetch chat sessions
     useEffect(() => {
@@ -80,6 +82,72 @@ const ChatScreen: React.FC = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    const checkForVoiceMessageBonus = async (userId: string, audioDuration: number) => {
+        if (!profile) return;
+        // Condition 1: Audio must be >= 10 seconds
+        if (audioDuration < 10) {
+            return;
+        }
+
+        // Condition 2: Must be within 1 minute of a completed call
+        const oneMinuteAgo = new Date(Date.now() - 1 * 60 * 1000);
+
+        const callsRef = db.collection('calls');
+        const q = callsRef
+            .where('listenerId', '==', profile.uid)
+            .where('userId', '==', userId)
+            .where('status', '==', 'completed')
+            .where('endTime', '>=', oneMinuteAgo)
+            .orderBy('endTime', 'desc')
+            .limit(1);
+
+        try {
+            const snapshot = await q.get();
+            if (snapshot.empty) {
+                return; // No eligible call found
+            }
+
+            const callDoc = snapshot.docs[0];
+            const callData = callDoc.data() as CallRecord;
+
+            // Condition 3: Bonus must not have been awarded already
+            if (callData.bonusAwarded) {
+                return;
+            }
+
+            // All conditions met, award the bonus using a transaction
+            const callRef = db.collection('calls').doc(callDoc.id);
+            const listenerRef = db.collection('listeners').doc(profile.uid);
+            const earningsRef = listenerRef.collection('earnings');
+            const bonusAmount = 2.00;
+
+            await db.runTransaction(async (transaction) => {
+                const freshCallDoc = await transaction.get(callRef);
+                if (freshCallDoc.data()?.bonusAwarded) {
+                    return; // Abort if bonus was awarded in a parallel process
+                }
+                transaction.update(callRef, { bonusAwarded: true });
+                transaction.update(listenerRef, {
+                    totalEarnings: firebase.firestore.FieldValue.increment(bonusAmount)
+                });
+                transaction.set(earningsRef.doc(), {
+                    amount: bonusAmount,
+                    type: 'bonus',
+                    sourceId: callDoc.id,
+                    userName: callData.userName,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            });
+
+            showNotification(`🎉 Bonus of ₹${bonusAmount.toFixed(2)} earned for quick follow-up!`, 'success');
+
+        } catch (error) {
+            console.error("Error awarding bonus:", error);
+            showNotification('Could not process bonus due to an error.', 'error');
+        }
+    };
+
+
     const handleSendText = async (text: string) => {
         if (!profile || !activeSession) return;
         const message: Omit<ChatMessage, 'id'> = {
@@ -109,6 +177,9 @@ const ChatScreen: React.FC = () => {
             duration: Math.round(duration),
         };
         await db.collection('chats').doc(activeSession.id).collection('messages').add(message);
+        
+        // After sending the message, check if a bonus should be awarded.
+        await checkForVoiceMessageBonus(activeSession.userId, duration);
     };
 
     return (
