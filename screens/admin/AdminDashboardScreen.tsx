@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db, functions, auth, rtdb } from '../../utils/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type { ListenerProfile, Application } from '../../types';
 import { useNavigate } from 'react-router';
 import { Link } from 'react-router-dom';
@@ -194,7 +195,7 @@ const AdminDashboardScreen: React.FC = () => {
 
     const functionName = action === 'approve' ? 'listener_approveApplication' : 'listener_rejectApplication';
     try {
-        const callable = functions.httpsCallable(functionName);
+        const callable = httpsCallable(functions, functionName);
         await callable(application);
         setNotification({ message: `Application successfully ${action}d.`, type: 'success' });
     } catch (error: any) {

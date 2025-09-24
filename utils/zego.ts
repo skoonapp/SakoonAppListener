@@ -1,4 +1,5 @@
-import { auth } from './firebase';
+import { auth, functions } from './firebase';
+import { httpsCallable } from 'firebase/functions';
 
 // ZegoUIKitPrebuilt is loaded from a script tag in index.html
 declare global {
@@ -8,50 +9,33 @@ declare global {
 }
 
 /**
- * Fetches a ZegoCloud Kit Token from our secure Firebase Function.
+ * Fetches a ZegoCloud Kit Token from our secure Firebase Function using the recommended httpsCallable method.
  * The function verifies the listener's authentication before issuing a token for a specific room.
  * @param roomId The ID of the call/room the listener is joining.
  * @returns A promise that resolves to the Zego Kit Token.
  */
 export const fetchZegoToken = async (roomId: string): Promise<string> => {
-    // यह URL Zego टोकन जेनरेट करने के लिए आपके डिप्लॉय किए गए फायरबेस फंक्शन एंडपॉइंट को इंगित करता है।
-    const cloudFunctionBaseUrl = 'https://asia-south1-sakoonapp-9574c.cloudfunctions.net/api';
-    const functionUrl = `${cloudFunctionBaseUrl}/generateZegoToken`;
-
     try {
         const user = auth.currentUser;
         if (!user) {
             throw new Error("User not logged in.");
         }
 
-        const idToken = await user.getIdToken(true);
+        const generateToken = httpsCallable(functions, 'generateZegoToken');
+        const result = await generateToken({ roomId });
 
-        const response = await fetch(functionUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`,
-            },
-            body: JSON.stringify({ roomId: roomId }),
-        });
+        // The httpsCallable result has the data inside a `data` property.
+        const token = (result.data as { token: string }).token;
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            console.error(`Failed to fetch token. Server responded with ${response.status}:`, errorData.error);
-            throw new Error(errorData.error || `Server error: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (!data || !data.token) {
-            console.error('Invalid token response from server:', data);
+        if (!token) {
+            console.error('Invalid token response from server:', result.data);
             throw new Error('Invalid token response from server.');
         }
 
-        return data.token;
+        return token;
 
     } catch (error) {
-        console.error("Failed to fetch Zego token from Firebase Function:", error);
+        console.error("Failed to fetch Zego token using httpsCallable:", error);
         throw new Error("Could not create a secure session. Please try again.");
     }
 };

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { functions } from '../../utils/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { useNotification } from '../../context/NotificationContext';
 
 // Icon for privacy note
@@ -134,12 +135,13 @@ const ApplyAsListener: React.FC = () => {
         try {
             // Use the secure backend function to submit the application.
             // This ensures validation, security, and proper data handling.
-            const submitApp = functions.httpsCallable('listener_submitListenerApplication');
+            const submitApp = httpsCallable(functions, 'listener_submitListenerApplication');
             const result = await submitApp(formData);
             
-            if (result.data.success) {
+            const resultData = result.data as { success: boolean, message: string };
+            if (resultData.success) {
                 setApplied(true);
-                showNotification(result.data.message as string, 'success');
+                showNotification(resultData.message, 'success');
             } else {
                  throw new Error("An unknown error occurred.");
             }
