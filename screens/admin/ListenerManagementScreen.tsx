@@ -55,9 +55,13 @@ const ListenerManagementScreen: React.FC = () => {
                 setLastDoc(lastVisible);
                 
                 setHasMore(snapshot.docs.length === PAGE_SIZE);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Error fetching listeners:", error);
-                setNotification({ message: 'Failed to fetch initial listeners.', type: 'error' });
+                let detailedMessage = 'Failed to fetch initial listeners.';
+                if (error.message && error.message.includes('firestore/indexes')) {
+                    detailedMessage += ' A Firestore index is required. Please check the browser console for a link to create it.';
+                }
+                setNotification({ message: detailedMessage, type: 'error' });
             } finally {
                 setLoading(false);
             }
