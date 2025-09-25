@@ -26,35 +26,42 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
 
   useEffect(() => {
     if (!user) {
-        setProfile(null);
-        setLoading(false);
-        return;
+      setProfile(null);
+      setLoading(false);
+      return;
     }
-    
-    setLoading(true); // Reset loading state when user changes
 
-    const unsubscribe = db.collection('listeners').doc(user.uid)
-      .onSnapshot(doc => {
-        if (doc.exists) {
-          setProfile(doc.data() as ListenerProfile);
-        } else {
-          console.warn("Listener profile not found in Firestore for UID:", user.uid);
-          setProfile(null);
-        }
-        setLoading(false);
-      }, err => {
-        console.error("Error fetching listener profile:", err);
+    setLoading(true);
+
+    const listenerRef = db.collection('listeners').doc(user.uid);
+
+    // Firestore listener for profile data
+    const unsubscribeFirestore = listenerRef.onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data() as ListenerProfile;
+        // Add the isOnline field to the profile type if it doesn't exist for type safety
+        const profileWithPresence = { ...data, isOnline: data.isOnline ?? (data.appStatus === 'Available') };
+        setProfile(profileWithPresence);
+      } else {
+        console.warn("Listener profile not found in Firestore for UID:", user.uid);
         setProfile(null);
-        setLoading(false);
-      });
+      }
+      setLoading(false);
+    }, err => {
+      console.error("Error fetching listener profile:", err);
+      setProfile(null);
+      setLoading(false);
+    });
+    
+    // The RTDB presence system has been removed to allow the app to be "online"
+    // for push notifications even when the browser tab is closed. The user's
+    // online status is now managed directly through Firestore via the dashboard toggle,
+    // logout actions, and call status.
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeFirestore();
+    };
   }, [user]);
-
-  // DEPRECATED: The real-time presence system based on RTDB connection has been removed.
-  // The listener's online/offline status is now manually controlled via the 'appStatus'
-  // field in their Firestore profile, allowing them to remain "online" even when the
-  // app is in the background.
 
   return (
     <ListenerContext.Provider value={{ profile, loading }}>

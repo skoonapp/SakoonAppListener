@@ -1,4 +1,4 @@
-import React, { useState, useEffect, lazy, Suspense } from 'react';
+import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { Routes, Route, Navigate, HashRouter } from 'react-router-dom';
 import firebase from 'firebase/compat/app';
 import { auth, db } from './utils/firebase';
@@ -75,6 +75,25 @@ const AuthenticatedApp: React.FC<{ user: firebase.User; authStatus: AuthStatus }
 const App: React.FC = () => {
   const [user, setUser] = useState<firebase.User | null>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>('loading');
+  const prevUserRef = useRef<firebase.User | null>(null);
+
+  useEffect(() => {
+    // This effect runs when the user object changes to handle logout cleanup.
+    const prevUser = prevUserRef.current;
+    if (prevUser && !user) { // A user was logged in, but now is not.
+        console.log(`User ${prevUser.uid} logged out. Setting status to offline.`);
+        // Set their status to offline on clean logout.
+        db.collection('listeners').doc(prevUser.uid).update({
+            appStatus: 'Offline',
+            isOnline: false, // Also update isOnline if the field is still in use.
+        }).catch(err => {
+            console.error("Failed to update listener status on logout:", err);
+        });
+    }
+    // Update the ref for the next render.
+    prevUserRef.current = user;
+  }, [user]);
+
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {

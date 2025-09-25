@@ -5,7 +5,15 @@
  * ताकि Firebase उन्हें पहचान सके और तैनात (deploy) कर सके।
  */
 import { setGlobalOptions } from 'firebase-functions/v2';
+import * as admin from "firebase-admin";
+
 setGlobalOptions({ region: 'asia-south1' });
+
+// Initialize Firebase Admin SDK
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
+
 
 // ===================================================================================
 // USER-SIDE FUNCTIONS (एंड-यूज़र के लिए)
@@ -53,3 +61,8 @@ export { listener_setAdminRole } from './listener/setAdminRole';
 
 // ZegoCloud utility function (common में बनाया गया)
 export { generateZegoToken as generateZegoTokenUtility } from "./common/zegocloud";
+
+// The onListenerStatusChanged function has been removed as it was causing incorrect
+// offline status when the app was closed. The new presence system is handled on the
+// client-side through Firestore writes, ensuring listeners remain "online" for
+// push notifications even when the app is in the background.

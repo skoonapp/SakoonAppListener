@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useListener } from '../../context/ListenerContext';
-import { db, rtdb } from '../../utils/firebase';
+import { db } from '../../utils/firebase';
 import firebase from 'firebase/compat/app';
 import type { CallRecord, ListenerChatSession, ListenerAppStatus } from '../../types';
 import InstallPWAButton from '../../components/common/InstallPWAButton';
@@ -115,25 +115,17 @@ const StatusToggle: React.FC = () => {
 
         try {
             const listenerRef = db.collection('listeners').doc(profile.uid);
-            // Update status and clean up deprecated presence fields.
+            
+            // This is the core change. We now control 'isOnline' directly.
+            // When 'Available', isOnline is true. Otherwise, it's false.
+            const isOnlineUpdate = newStatus === 'Available';
+
             await listenerRef.update({
                 appStatus: newStatus,
-                isOnline: firebase.firestore.FieldValue.delete(),
-                lastActive: firebase.firestore.FieldValue.delete(),
+                isOnline: isOnlineUpdate,
             });
 
-            // Sync status with Realtime Database to address the stale data issue.
-            const presenceRef = rtdb.ref(`/status/${profile.uid}`);
-            if (newStatus === 'Available') {
-                // Set online status in RTDB
-                await presenceRef.set({
-                    isOnline: true,
-                    lastActive: firebase.database.ServerValue.TIMESTAMP,
-                });
-            } else if (newStatus === 'Offline') {
-                // Remove from RTDB when offline to clean up
-                await presenceRef.remove();
-            }
+            // The Realtime Database logic has been removed to fix the presence issue.
 
         } catch (error) {
             console.error("Failed to update status:", error);

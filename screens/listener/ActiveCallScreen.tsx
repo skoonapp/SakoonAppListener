@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../utils/firebase';
 import { fetchZegoToken } from '../../utils/zego';
 import { useListener } from '../../context/ListenerContext';
-import type { CallRecord } from '../../types';
+import type { CallRecord, ListenerAppStatus } from '../../types';
 
 const formatCountdown = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
@@ -24,6 +24,35 @@ const ActiveCallScreen: React.FC = () => {
     // --- State for Callback Feature ---
     const [countdown, setCountdown] = useState<number | null>(null);
     const zegoInstanceRef = useRef<any>(null);
+
+    // Effect for managing listener appStatus (Busy/Available)
+    useEffect(() => {
+        if (!profile) return;
+
+        const listenerRef = db.collection('listeners').doc(profile.uid);
+        let previousStatus: ListenerAppStatus = 'Available'; // Default assumption
+
+        // Set status to 'Busy' when component mounts
+        listenerRef.get().then(doc => {
+            if (doc.exists) {
+                const data = doc.data();
+                if (data) {
+                    previousStatus = data.appStatus;
+                    // Only update if not already busy
+                    if (previousStatus !== 'Busy') {
+                        listenerRef.update({ appStatus: 'Busy' });
+                    }
+                }
+            }
+        });
+
+        // Restore previous status when component unmounts
+        return () => {
+            // Restore the actual previous status. If they were 'Offline'
+            // before the call, they will be 'Offline' after. This is correct.
+            listenerRef.update({ appStatus: previousStatus });
+        };
+    }, [profile]);
 
 
     // Effect to handle the countdown timer for callback calls
