@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import firebase from 'firebase/compat/app';
-import { db, functions, auth, rtdb } from '../../utils/firebase';
+import { db, functions, auth } from '../../utils/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { ListenerProfile, Application } from '../../types';
 import { useNavigate, Link } from 'react-router-dom';
@@ -82,7 +82,6 @@ const AdminDashboardScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
-  const [onlineCount, setOnlineCount] = useState(0);
   const navigate = useNavigate();
   const { enablePTR, disablePTR } = usePTR();
 
@@ -106,10 +105,12 @@ const AdminDashboardScreen: React.FC = () => {
           activeListenersSnap,
           todayCallsSnap,
           activeCallsSnap,
+          onlineListenersSnap,
         ] = await Promise.all([
           db.collection('listeners').where('status', '==', 'active').get(),
           db.collection('calls').where('startTime', '>=', startOfToday).get(),
           db.collection('calls').where('status', '==', 'active').get(),
+          db.collection('listeners').where('appStatus', '==', 'Available').get(),
         ]);
         
         const dailyRevenue = todayCallsSnap.docs
@@ -121,6 +122,7 @@ const AdminDashboardScreen: React.FC = () => {
         
         setStats({
           activeListeners: activeListenersSnap.size,
+          onlineListeners: onlineListenersSnap.size,
           dailyRevenue: dailyRevenue.toFixed(2),
           dailyProfit: 'N/A', // Profit calculation is complex
           dailyTransactions: dailyTransactions,
@@ -141,22 +143,6 @@ const AdminDashboardScreen: React.FC = () => {
     enablePTR(fetchStats);
     return () => disablePTR();
   }, [enablePTR, disablePTR, fetchStats]);
-
-  useEffect(() => {
-    // Real-time listener for online users
-    const statusRef = rtdb.ref('status');
-    statusRef.on('value', (snapshot) => {
-        const statuses = snapshot.val();
-        if (statuses) {
-            const count = Object.values(statuses).filter((s: any) => s.isOnline).length;
-            setOnlineCount(count);
-        } else {
-            setOnlineCount(0);
-        }
-    });
-
-    return () => statusRef.off();
-  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -240,7 +226,7 @@ const AdminDashboardScreen: React.FC = () => {
         <div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Main Dashboard Overview</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Listeners Online" value={onlineCount} icon={<OnlineIcon />} loading={false} />
+                <StatCard title="Listeners Online" value={stats?.onlineListeners ?? '...'} icon={<OnlineIcon />} loading={statsLoading} />
                 <StatCard title="Active Listeners" value={stats?.activeListeners ?? '...'} icon={<UserCheckIcon />} loading={statsLoading} />
                 <StatCard title="New Applications" value={applications.length} icon={<NewApplicationIcon />} loading={loading} />
                 <StatCard title="Pending Onboarding" value={onboardingListeners.length} icon={<UserClockIcon />} loading={loading} />

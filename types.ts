@@ -47,9 +47,7 @@ export interface ListenerProfile {
   averagePerMessageEarning?: number;
   dailyEarnings?: { [key: string]: number };
   
-  // Real-time Presence
-  isOnline?: boolean;
-  lastActive?: firebase.firestore.Timestamp;
+  // Real-time Presence - DEPRECATED in favor of appStatus
   approvedBy?: string;
 }
 
