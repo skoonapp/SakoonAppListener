@@ -46,9 +46,6 @@ export interface ListenerProfile {
   averagePerMinuteEarning?: number;
   averagePerMessageEarning?: number;
   dailyEarnings?: { [key: string]: number };
-  
-  // Real-time Presence - DEPRECATED in favor of appStatus
-  approvedBy?: string;
 }
 
 // Represents a single call record in the history.

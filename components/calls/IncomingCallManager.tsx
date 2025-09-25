@@ -1,9 +1,5 @@
 
 
-
-
-
-
 import React, { useEffect } from 'react';
 // FIX: Corrected react-router import. In v6, hooks should be imported from 'react-router-dom'.
 import { useNavigate, useLocation } from 'react-router-dom';
