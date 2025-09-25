@@ -65,6 +65,8 @@ export interface CallRecord {
   earnings?: number;
   type?: 'call'; // for activity feed
   bonusAwarded?: boolean; // To track if a follow-up bonus was given
+  isCallback?: boolean; // For the new 2-minute callback feature
+  maxDurationSeconds?: number; // To enforce the 2-minute limit
 }
 
 // Represents a chat session between a listener and a user.

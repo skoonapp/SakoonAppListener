@@ -4,8 +4,11 @@ import { useListener } from '../../context/ListenerContext';
 import type { CallRecord } from '../../types';
 import CallHistoryCard from '../../components/calls/CallHistoryCard';
 import { usePTR } from '../../context/PTRContext';
+import { useNavigate } from 'react-router-dom';
+import firebase from 'firebase/compat/app';
+import { useNotification } from '../../context/NotificationContext';
 
-type StatusFilter = 'all' | 'completed' | 'missed' | 'rejected';
+type StatusFilter = 'all' | 'completed' | 'missed_and_rejected' | 'callback';
 type DateFilter = 'all' | 'today' | '7d' | '30d';
 
 const FilterButton: React.FC<{
@@ -44,6 +47,9 @@ const CallsScreen: React.FC = () => {
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
     const { enablePTR, disablePTR } = usePTR();
+    const navigate = useNavigate();
+    const { showNotification } = useNotification();
+    const [isCreatingCallback, setIsCreatingCallback] = useState(false);
 
     const handleRefresh = useCallback(async () => {
         // Since the data is real-time with onSnapshot, a "refresh" is mostly for UX.
@@ -81,15 +87,44 @@ const CallsScreen: React.FC = () => {
         return () => unsubscribe();
     }, [profile?.uid]);
 
+    const handleStartCallback = async (originalCall: CallRecord) => {
+        if (!profile || isCreatingCallback) return;
+
+        if (!window.confirm(`Start a 2-minute callback with ${originalCall.userName}? This call will not generate earnings and will end automatically.`)) {
+            return;
+        }
+
+        setIsCreatingCallback(true);
+        showNotification('Initiating callback...', 'info');
+
+        try {
+            const newCallRef = await db.collection('calls').add({
+                listenerId: profile.uid,
+                userId: originalCall.userId,
+                userName: originalCall.userName,
+                userAvatar: originalCall.userAvatar || null,
+                startTime: firebase.firestore.FieldValue.serverTimestamp(),
+                status: 'ringing',
+                earnings: 0,
+                type: 'call',
+                isCallback: true,
+                maxDurationSeconds: 120,
+            });
+
+            navigate(`/call/${newCallRef.id}`);
+
+        } catch (error) {
+            console.error("Failed to create callback call:", error);
+            showNotification('Could not start callback. Please try again.', 'error');
+        } finally {
+            setIsCreatingCallback(false);
+        }
+    };
+
     const filteredCalls = useMemo(() => {
         let calls = allCalls;
 
-        // Filter by status
-        if (statusFilter !== 'all') {
-            calls = calls.filter(call => call.status === statusFilter);
-        }
-
-        // Filter by date
+        // Date filter is applied first
         if (dateFilter !== 'all') {
             const now = new Date();
             let startDate = new Date();
@@ -105,14 +140,42 @@ const CallsScreen: React.FC = () => {
             calls = calls.filter(call => call.startTime && call.startTime.toDate() >= startDate);
         }
 
-        return calls;
+        // Then, filter by status
+        switch (statusFilter) {
+            case 'completed':
+                return calls.filter(call => call.status === 'completed');
+            case 'missed_and_rejected':
+                return calls.filter(call => call.status === 'missed' || call.status === 'rejected');
+            case 'callback': {
+                const callbackOpportunities = new Map<string, CallRecord>();
+                const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+                // No date filter for callbacks, it's always last 24h
+                allCalls
+                    .filter(call =>
+                        call.status === 'completed' &&
+                        call.durationSeconds && call.durationSeconds >= 300 && // 5 minutes
+                        call.endTime && call.endTime.toDate() > twentyFourHoursAgo
+                    )
+                    .forEach(call => {
+                        if (!callbackOpportunities.has(call.userId) || (call.endTime && callbackOpportunities.get(call.userId)!.endTime && call.endTime.toMillis() > callbackOpportunities.get(call.userId)!.endTime!.toMillis())) {
+                            callbackOpportunities.set(call.userId, call);
+                        }
+                    });
+
+                return Array.from(callbackOpportunities.values());
+            }
+            case 'all':
+            default:
+                return calls;
+        }
     }, [allCalls, statusFilter, dateFilter]);
 
     const statusOptions: {value: StatusFilter, label: string}[] = [
         { value: 'all', label: 'All Calls' },
         { value: 'completed', label: 'Completed' },
-        { value: 'missed', label: 'Missed' },
-        { value: 'rejected', label: 'Reverse' },
+        { value: 'missed_and_rejected', label: 'Missed' },
+        { value: 'callback', label: 'Callback' },
     ];
 
     return (
@@ -120,16 +183,18 @@ const CallsScreen: React.FC = () => {
             <header className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                     <p className="text-slate-500 dark:text-slate-400">Review your recent calls.</p>
-                    <FilterButton 
-                        value={dateFilter}
-                        onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-                        options={[
-                            { value: 'all', label: 'All Time' },
-                            { value: 'today', label: 'Today' },
-                            { value: '7d', label: 'Last 7 Days' },
-                            { value: '30d', label: 'Last 30 Days' },
-                        ]}
-                    />
+                    {statusFilter !== 'callback' && ( // Hide date filter on callback tab
+                        <FilterButton 
+                            value={dateFilter}
+                            onChange={(e) => setDateFilter(e.target.value as DateFilter)}
+                            options={[
+                                { value: 'all', label: 'All Time' },
+                                { value: 'today', label: 'Today' },
+                                { value: '7d', label: 'Last 7 Days' },
+                                { value: '30d', label: 'Last 30 Days' },
+                            ]}
+                        />
+                    )}
                 </div>
                  <div className="flex items-center border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
                     {statusOptions.map(opt => (
@@ -148,15 +213,31 @@ const CallsScreen: React.FC = () => {
                 </div>
             ) : filteredCalls.length > 0 ? (
                 <div className="space-y-3">
-                    {filteredCalls.map(call => (
-                        <CallHistoryCard key={call.callId} call={call} />
-                    ))}
+                    {filteredCalls.map(call =>
+                        statusFilter === 'callback' ? (
+                            <button 
+                                key={call.callId} 
+                                onClick={() => handleStartCallback(call)}
+                                disabled={isCreatingCallback}
+                                className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-xl"
+                            >
+                                <CallHistoryCard call={call} />
+                            </button>
+                        ) : (
+                            <CallHistoryCard key={call.callId} call={call} />
+                        )
+                    )}
                 </div>
             ) : (
                 <div className="bg-white dark:bg-slate-800 p-8 rounded-xl shadow-sm text-center border border-dashed border-slate-300 dark:border-slate-600">
                     <svg xmlns="http://www.w3.org/2000/svg" className="mx-auto h-12 w-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     <h3 className="mt-2 text-lg font-medium text-slate-800 dark:text-slate-200">No Calls Found</h3>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Your call history matching these filters will appear here.</p>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        {statusFilter === 'callback' 
+                          ? 'Users eligible for a callback will appear here.' 
+                          : 'Your call history matching these filters will appear here.'
+                        }
+                    </p>
                 </div>
             )}
         </div>

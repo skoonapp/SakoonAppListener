@@ -1,26 +1,48 @@
-
-
-
-
-
-
 import React, { useEffect, useRef, useState } from 'react';
-// FIX: Corrected react-router import. In v6, hooks should be imported from 'react-router-dom'.
 import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../utils/firebase';
 import { fetchZegoToken } from '../../utils/zego';
 import { useListener } from '../../context/ListenerContext';
 import type { CallRecord } from '../../types';
 
+const formatCountdown = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+};
+
+
 const ActiveCallScreen: React.FC = () => {
     const { callId } = useParams<{ callId: string }>();
     const { profile } = useListener();
-    // FIX: Upgraded from useHistory (v5) to useNavigate (v6).
     const navigate = useNavigate();
     const [callData, setCallData] = useState<CallRecord | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [isJoining, setIsJoining] = useState(true);
     const callContainerRef = useRef<HTMLDivElement>(null);
+
+    // --- State for Callback Feature ---
+    const [countdown, setCountdown] = useState<number | null>(null);
+    const zegoInstanceRef = useRef<any>(null);
+
+
+    // Effect to handle the countdown timer for callback calls
+    useEffect(() => {
+        if (countdown === null || !zegoInstanceRef.current) return;
+
+        if (countdown <= 0) {
+            // Time's up, leave the room. The onLeaveRoom callback will handle cleanup.
+            zegoInstanceRef.current.leaveRoom();
+            return;
+        }
+
+        const timerId = setInterval(() => {
+            setCountdown(prev => (prev !== null ? prev - 1 : null));
+        }, 1000);
+
+        return () => clearInterval(timerId); // Cleanup interval on component unmount or countdown change
+    }, [countdown]);
+
 
     // Effect to fetch call data and join the call
     useEffect(() => {
@@ -31,7 +53,6 @@ const ActiveCallScreen: React.FC = () => {
         const unsubscribe = callRef.onSnapshot(async (doc) => {
             if (!doc.exists) {
                 setError("Call not found or has ended.");
-                // FIX: Upgraded from history.replace (v5) to navigate (v6).
                 setTimeout(() => navigate('/dashboard', { replace: true }), 3000);
                 return;
             }
@@ -45,7 +66,13 @@ const ActiveCallScreen: React.FC = () => {
                 try {
                     const token = await fetchZegoToken(callId);
                     const zp = window.ZegoUIKitPrebuilt.create(token);
+                    zegoInstanceRef.current = zp; // Store the instance for later control
                     
+                    // If it's a callback, start the countdown timer
+                    if (data.isCallback) {
+                        setCountdown(data.maxDurationSeconds || 120);
+                    }
+
                     zp.joinRoom({
                         container: callContainerRef.current,
                         sharedLinks: [
@@ -67,7 +94,6 @@ const ActiveCallScreen: React.FC = () => {
                                       .catch(err => console.error("Failed to update call status on leave:", err));
                                 }
                             });
-                            // FIX: Upgraded from history.replace (v5) to navigate (v6).
                             navigate('/dashboard', { replace: true });
                         },
                     });
@@ -79,7 +105,6 @@ const ActiveCallScreen: React.FC = () => {
             // If the call status changes to something that terminates it
             if (['completed', 'rejected', 'missed', 'cancelled'].includes(data.status)) {
                 setError(`Call has been ${data.status}. Redirecting...`);
-                 // FIX: Upgraded from history.replace (v5) to navigate (v6).
                  setTimeout(() => navigate('/dashboard', { replace: true }), 3000);
             }
 
@@ -112,7 +137,17 @@ const ActiveCallScreen: React.FC = () => {
         );
     }
     
-    return <div ref={callContainerRef} className="w-screen h-screen" />;
+    return (
+        <div className="relative w-screen h-screen">
+            <div ref={callContainerRef} className="w-full h-full" />
+            {countdown !== null && (
+                <div className="absolute top-4 right-4 bg-red-600/80 text-white p-3 rounded-lg shadow-lg flex items-center gap-2 animate-pulse">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span className="font-mono font-bold text-xl tracking-wider">{formatCountdown(countdown)}</span>
+                </div>
+            )}
+        </div>
+    );
 };
 
 export default ActiveCallScreen;
