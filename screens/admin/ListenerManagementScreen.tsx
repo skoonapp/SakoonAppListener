@@ -42,9 +42,12 @@ const ListenerManagementScreen: React.FC = () => {
 
     const fetchInitialListeners = useCallback(async () => {
         setLoading(true);
+        setHasMore(true);
+        setLastDoc(null);
         try {
+            // FIX: Order by 'displayName' for more robust sorting, as 'createdAt' might be missing on older documents.
             const query = db.collection('listeners')
-                .orderBy('createdAt', 'desc')
+                .orderBy('displayName')
                 .limit(PAGE_SIZE);
             
             const snapshot = await query.get();
@@ -83,8 +86,9 @@ const ListenerManagementScreen: React.FC = () => {
         
         setLoadingMore(true);
         try {
+            // FIX: Order by 'displayName' to match the initial fetch query.
             const query = db.collection('listeners')
-                .orderBy('createdAt', 'desc')
+                .orderBy('displayName')
                 .startAfter(lastDoc)
                 .limit(PAGE_SIZE);
 

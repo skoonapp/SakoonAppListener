@@ -13,17 +13,23 @@ const ensureIsAdmin = async (context: functions.https.CallableContext) => {
     throw new functions.https.HttpsError("unauthenticated", "The function must be called while authenticated.");
   }
 
+  // Primary check: custom claims on the auth token.
+  if (context.auth.token.admin === true) {
+    return;
+  }
+
+  // Fallback check: Firestore document flag.
   try {
-    const listenerDoc = await db.collection('listeners').doc(uid).get();
+    const listenerDoc = await db.collection("listeners").doc(uid).get();
     if (listenerDoc.exists && listenerDoc.data()?.isAdmin === true) {
-        return; // Success! User is an admin in Firestore.
+      return;
     }
   } catch (error) {
     functions.logger.error(`Error checking Firestore for admin status for UID: ${uid}`, error);
     // Fall through to the permission denied error
   }
 
-  // If the check failed or user is not admin, deny permission.
+  // If both checks fail, deny permission.
   throw new functions.https.HttpsError("permission-denied", "User must be an admin to perform this action.");
 };
 
