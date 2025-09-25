@@ -1,8 +1,9 @@
 
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { functions } from '../../utils/firebase';
-import { httpsCallable } from 'firebase/functions';
+// import { httpsCallable } from 'firebase/functions'; // FIX: Remove modular import
 import { useNotification } from '../../context/NotificationContext';
 
 // Icon for privacy note
@@ -133,9 +134,8 @@ const ApplyAsListener: React.FC = () => {
         setError('');
 
         try {
-            // Use the secure backend function to submit the application.
-            // This ensures validation, security, and proper data handling.
-            const submitApp = httpsCallable(functions, 'listener_submitListenerApplication');
+            // FIX: Use the compat syntax for calling the function
+            const submitApp = functions.httpsCallable('listener_submitListenerApplication');
             const result = await submitApp(formData);
             
             const resultData = result.data as { success: boolean, message: string };

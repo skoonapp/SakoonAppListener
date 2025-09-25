@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db, functions, auth } from '../../utils/firebase';
-import { httpsCallable } from 'firebase/functions';
+// import { httpsCallable } from 'firebase/functions'; // FIX: Remove modular import
 import type { ListenerProfile, Application } from '../../types';
 import { useNavigate, Link } from 'react-router-dom';
 import { usePTR } from '../../context/PTRContext';
@@ -186,7 +186,8 @@ const AdminDashboardScreen: React.FC = () => {
 
     const functionName = action === 'approve' ? 'listener_approveApplication' : 'listener_rejectApplication';
     try {
-        const callable = httpsCallable(functions, functionName);
+        // FIX: Use the compat syntax for calling the function
+        const callable = functions.httpsCallable(functionName);
         await callable(application);
         setNotification({ message: `Application successfully ${action}d.`, type: 'success' });
     } catch (error: any) {

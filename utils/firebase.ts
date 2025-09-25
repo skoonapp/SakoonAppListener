@@ -3,8 +3,7 @@ import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 import 'firebase/compat/database';
 import 'firebase/compat/storage';
-// Remove compat import for functions: import 'firebase/compat/functions';
-import { getFunctions } from 'firebase/functions';
+import 'firebase/compat/functions'; // FIX: Use compat version for functions
 import 'firebase/compat/messaging';
 
 
@@ -26,7 +25,8 @@ export const auth = firebase.auth();
 export const db = firebase.firestore();
 export const rtdb = firebase.database();
 export const storage = firebase.storage();
-export const functions = getFunctions(app, 'asia-south1');
+// FIX: Get functions instance using the compat syntax for a specific region
+export const functions = firebase.app().functions('asia-south1');
 export const messaging = firebase.messaging.isSupported() ? firebase.messaging() : null;
 export const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
 
