@@ -115,9 +115,11 @@ const StatusToggle: React.FC = () => {
 
         try {
             const listenerRef = db.collection('listeners').doc(profile.uid);
-            // This update now includes the deletion of old presence fields.
+            // Update status and clean up deprecated presence fields.
             await listenerRef.update({
                 appStatus: newStatus,
+                isOnline: firebase.firestore.FieldValue.delete(),
+                lastActive: firebase.firestore.FieldValue.delete(),
             });
 
             // Sync status with Realtime Database to address the stale data issue.

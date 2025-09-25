@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db, functions, auth } from '../../utils/firebase';
 import { httpsCallable } from 'firebase/functions';
@@ -78,12 +78,20 @@ const PayoutNotice: React.FC = () => {
 const AdminDashboardScreen: React.FC = () => {
   const [applications, setApplications] = useState<Application[]>([]);
   const [onboardingListeners, setOnboardingListeners] = useState<ListenerProfile[]>([]);
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<any>({
+      onlineListeners: 0,
+      activeListeners: 0,
+      dailyRevenue: '0.00',
+      dailyProfit: 'N/A',
+      dailyTransactions: 0,
+      activeCallsNow: 0,
+      activeChatsNow: 'N/A',
+  });
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
   const navigate = useNavigate();
-  const { enablePTR, disablePTR } = usePTR();
+  const { disablePTR } = usePTR();
 
   const handleLogout = async () => {
     try {
@@ -94,61 +102,16 @@ const AdminDashboardScreen: React.FC = () => {
         setNotification({ message: 'Could not log out. Please try again.', type: 'error' });
     }
   };
-  
-  const fetchStats = useCallback(async () => {
-      setStatsLoading(true);
-      try {
-        const now = new Date();
-        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-        const [
-          activeListenersSnap,
-          todayCallsSnap,
-          activeCallsSnap,
-          onlineListenersSnap,
-        ] = await Promise.all([
-          db.collection('listeners').where('status', '==', 'active').get(),
-          db.collection('calls').where('startTime', '>=', startOfToday).get(),
-          db.collection('calls').where('status', '==', 'active').get(),
-          db.collection('listeners').where('appStatus', '==', 'Available').get(),
-        ]);
-        
-        const dailyRevenue = todayCallsSnap.docs
-          .filter(doc => doc.data().status === 'completed')
-          .reduce((sum, doc) => sum + (doc.data().earnings || 0), 0);
-        
-        const dailyTransactions = todayCallsSnap.docs
-            .filter(doc => doc.data().status === 'completed').length;
-        
-        setStats({
-          activeListeners: activeListenersSnap.size,
-          onlineListeners: onlineListenersSnap.size,
-          dailyRevenue: dailyRevenue.toFixed(2),
-          dailyProfit: 'N/A', // Profit calculation is complex
-          dailyTransactions: dailyTransactions,
-          activeCallsNow: activeCallsSnap.size,
-          activeChatsNow: 'N/A', // Not easily trackable
-        });
-
-      } catch (error) {
-        console.error("Error fetching dashboard stats:", error);
-        setNotification({ message: 'Failed to load some statistics.', type: 'error' });
-      } finally {
-        setStatsLoading(false);
-      }
-    }, []);
-
-  // Effect for PTR
-  useEffect(() => {
-    enablePTR(fetchStats);
-    return () => disablePTR();
-  }, [enablePTR, disablePTR, fetchStats]);
 
   useEffect(() => {
+    // This screen is real-time, so disable pull-to-refresh.
+    disablePTR();
+    
     setLoading(true);
-    fetchStats(); // Initial fetch
+    setStatsLoading(true);
 
-    // More efficient query to only fetch applications with 'pending' status.
+    // --- Real-time Listeners for Dashboard Data ---
+
     const unsubApplications = db.collection('applications')
       .where('status', '==', 'pending')
       .orderBy('createdAt', 'desc')
@@ -158,11 +121,7 @@ const AdminDashboardScreen: React.FC = () => {
         setLoading(false);
       }, (err: any) => {
         console.error("Error fetching applications:", err);
-        let detailedMessage = 'Failed to load new applications.';
-        if (err.message && err.message.includes('firestore/indexes')) {
-            detailedMessage += ' A Firestore index is required. Please check the browser console for a link to create it.';
-        }
-        setNotification({ message: detailedMessage, type: 'error' });
+        setNotification({ message: 'Failed to load new applications.', type: 'error' });
         setLoading(false);
       });
       
@@ -171,18 +130,52 @@ const AdminDashboardScreen: React.FC = () => {
         setOnboardingListeners(snapshot.docs.map(doc => doc.data() as ListenerProfile));
       }, (err: any) => {
         console.error("Error fetching onboarding listeners:", err);
-        let detailedMessage = 'Failed to load onboarding listeners.';
-        if (err.message && err.message.includes('firestore/indexes')) {
-            detailedMessage += ' A Firestore index is required for this query. Please check the browser console for a link to create it.';
-        }
-        setNotification({ message: detailedMessage, type: 'error' });
+        setNotification({ message: 'Failed to load onboarding listeners.', type: 'error' });
       });
+      
+    const unsubOnline = db.collection('listeners').where('appStatus', '==', 'Available')
+        .onSnapshot(snapshot => {
+            setStats(prev => ({ ...prev, onlineListeners: snapshot.size }));
+            setStatsLoading(false);
+        });
+        
+    const unsubActive = db.collection('listeners').where('status', '==', 'active')
+        .onSnapshot(snapshot => {
+            setStats(prev => ({ ...prev, activeListeners: snapshot.size }));
+        });
+
+    const unsubActiveCalls = db.collection('calls').where('status', '==', 'active')
+        .onSnapshot(snapshot => {
+            setStats(prev => ({ ...prev, activeCallsNow: snapshot.size }));
+        });
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const unsubTodayCalls = db.collection('calls').where('startTime', '>=', startOfToday)
+        .onSnapshot(snapshot => {
+            const dailyRevenue = snapshot.docs
+                .filter(doc => doc.data().status === 'completed')
+                .reduce((sum, doc) => sum + (doc.data().earnings || 0), 0);
+            
+            const dailyTransactions = snapshot.docs
+                .filter(doc => doc.data().status === 'completed').length;
+
+            setStats(prev => ({
+                ...prev,
+                dailyRevenue: dailyRevenue.toFixed(2),
+                dailyTransactions: dailyTransactions
+            }));
+        });
 
     return () => {
       unsubApplications();
       unsubOnboarding();
+      unsubOnline();
+      unsubActive();
+      unsubActiveCalls();
+      unsubTodayCalls();
     };
-  }, [fetchStats]);
+  }, [disablePTR]);
 
   const handleApplicationAction = async (application: Application, action: 'approve' | 'reject') => {
     if (!application.id) return;
@@ -226,8 +219,8 @@ const AdminDashboardScreen: React.FC = () => {
         <div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Main Dashboard Overview</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard title="Listeners Online" value={stats?.onlineListeners ?? '...'} icon={<OnlineIcon />} loading={statsLoading} />
-                <StatCard title="Active Listeners" value={stats?.activeListeners ?? '...'} icon={<UserCheckIcon />} loading={statsLoading} />
+                <StatCard title="Listeners Online" value={stats.onlineListeners} icon={<OnlineIcon />} loading={statsLoading} />
+                <StatCard title="Active Listeners" value={stats.activeListeners} icon={<UserCheckIcon />} loading={statsLoading} />
                 <StatCard title="New Applications" value={applications.length} icon={<NewApplicationIcon />} loading={loading} />
                 <StatCard title="Pending Onboarding" value={onboardingListeners.length} icon={<UserClockIcon />} loading={loading} />
             </div>
@@ -237,11 +230,11 @@ const AdminDashboardScreen: React.FC = () => {
         <div>
             <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Daily Performance</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-                <StatCard title="Today's Revenue" value={`₹${stats?.dailyRevenue ?? '...'}`} icon={<RupeeIcon />} loading={statsLoading} />
-                <StatCard title="Today's Profit" value={`${stats?.dailyProfit ?? '...'}`} icon={<ProfitIcon />} loading={statsLoading} />
-                <StatCard title="Today's Transactions" value={stats?.dailyTransactions ?? '...'} icon={<TransactionIcon />} loading={statsLoading} />
-                <StatCard title="Active Calls Now" value={stats?.activeCallsNow ?? '...'} icon={<PhoneIcon />} loading={statsLoading} />
-                <StatCard title="Active Chats Now" value={`${stats?.activeChatsNow ?? '...'}`} icon={<ChatIcon />} loading={statsLoading} />
+                <StatCard title="Today's Revenue" value={`₹${stats.dailyRevenue}`} icon={<RupeeIcon />} loading={statsLoading} />
+                <StatCard title="Today's Profit" value={`${stats.dailyProfit}`} icon={<ProfitIcon />} loading={statsLoading} />
+                <StatCard title="Today's Transactions" value={stats.dailyTransactions} icon={<TransactionIcon />} loading={statsLoading} />
+                <StatCard title="Active Calls Now" value={stats.activeCallsNow} icon={<PhoneIcon />} loading={statsLoading} />
+                <StatCard title="Active Chats Now" value={`${stats.activeChatsNow}`} icon={<ChatIcon />} loading={statsLoading} />
             </div>
         </div>
 
