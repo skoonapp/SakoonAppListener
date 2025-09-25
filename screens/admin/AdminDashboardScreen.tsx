@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db, functions, auth } from '../../utils/firebase';
-// import { httpsCallable } from 'firebase/functions'; // FIX: Remove modular import
 import type { ListenerProfile, Application } from '../../types';
 import { useNavigate, Link } from 'react-router-dom';
 import { usePTR } from '../../context/PTRContext';
@@ -35,7 +34,9 @@ const UserCheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h
 const PhoneIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" /></svg>;
 const ChatIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>;
 const OnlineIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-5a.75.75 0 01.75.75v4.5a.75.75 0 01-1.5 0v-4.5A.75.75 0 0110 5zm0 10a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" /></svg>;
-
+const CheckIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>;
+const XIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg>;
+const SpinnerIcon = () => <svg className="animate-spin h-5 w-5 text-slate-500 dark:text-slate-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>;
 
 const StatCard: React.FC<{ title: string; value: string | number; icon: React.ReactNode; loading: boolean; }> = ({ title, value, icon, loading }) => (
     <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm flex items-center gap-4 h-full">
@@ -90,6 +91,7 @@ const AdminDashboardScreen: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [statsLoading, setStatsLoading] = useState(true);
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
+  const [processingAppId, setProcessingAppId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { disablePTR } = usePTR();
 
@@ -188,21 +190,25 @@ const AdminDashboardScreen: React.FC = () => {
   }, [disablePTR]);
 
   const handleApplicationAction = async (application: Application, action: 'approve' | 'reject') => {
-    if (!application.id) return;
+    if (!application.id || processingAppId) return;
+
     const confirmationText = action === 'approve'
       ? `Are you sure you want to approve this application for ${application.displayName}? This will create a listener account and ask them to complete their profile.`
       : `Are you sure you want to reject this application for ${application.displayName}?`;
+    
     if (!window.confirm(confirmationText)) return;
 
+    setProcessingAppId(application.id);
     const functionName = action === 'approve' ? 'listener_approveApplication' : 'listener_rejectApplication';
     try {
-        // FIX: Use the compat syntax for calling the function
         const callable = functions.httpsCallable(functionName);
         await callable(application);
         setNotification({ message: `Application successfully ${action}d.`, type: 'success' });
     } catch (error: any) {
         console.error(`Error ${action}ing application for ${application.displayName} (${application.id}):`, error);
         setNotification({ message: `Failed to ${action} application: ${error.message}`, type: 'error' });
+    } finally {
+        setProcessingAppId(null);
     }
   };
 
@@ -274,9 +280,28 @@ const AdminDashboardScreen: React.FC = () => {
                                                 <div className="font-normal text-slate-500">{app.phone}</div>
                                             </th>
                                             <td className="px-6 py-4 capitalize">{app.profession}</td>
-                                            <td className="px-6 py-4 text-right space-x-2">
-                                                <button onClick={() => handleApplicationAction(app, 'approve')} className="font-medium text-green-600 dark:text-green-500 hover:underline">Approve</button>
-                                                <button onClick={() => handleApplicationAction(app, 'reject')} className="font-medium text-red-600 dark:text-red-500 hover:underline">Reject</button>
+                                            <td className="px-6 py-4 text-right">
+                                                {processingAppId === app.id ? (
+                                                    <div className="flex justify-end items-center gap-2 text-slate-500 dark:text-slate-400 text-xs font-semibold">
+                                                        <SpinnerIcon />
+                                                        <span>Processing...</span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex justify-end items-center gap-2">
+                                                        <button
+                                                            onClick={() => handleApplicationAction(app, 'approve')}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full transition-colors bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-500/20 dark:text-green-300 dark:hover:bg-green-500/30"
+                                                        >
+                                                            <CheckIcon /> Approve
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleApplicationAction(app, 'reject')}
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-full transition-colors bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-500/20 dark:text-red-300 dark:hover:bg-red-500/30"
+                                                        >
+                                                            <XIcon /> Reject
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </td>
                                         </tr>
                                     ))
