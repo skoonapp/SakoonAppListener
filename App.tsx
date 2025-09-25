@@ -1,7 +1,7 @@
 import React, { useState, useEffect, lazy, Suspense, useRef } from 'react';
 import { Routes, Route, Navigate, HashRouter } from 'react-router-dom';
 import firebase from 'firebase/compat/app';
-import { auth, db } from './utils/firebase';
+import { auth, db, rtdb } from './utils/firebase';
 
 import LoginScreen from './screens/auth/LoginScreen';
 import MainLayout from './components/layout/MainLayout';
@@ -82,12 +82,20 @@ const App: React.FC = () => {
     const prevUser = prevUserRef.current;
     if (prevUser && !user) { // A user was logged in, but now is not.
         console.log(`User ${prevUser.uid} logged out. Setting status to offline.`);
-        // Set their status to offline on clean logout.
+        
+        // Set Firestore availability to Offline
         db.collection('listeners').doc(prevUser.uid).update({
             appStatus: 'Offline',
-            isOnline: false,
         }).catch(err => {
-            console.error("Failed to update listener status on logout:", err);
+            console.error("Failed to update Firestore status on logout:", err);
+        });
+
+        // Set RTDB presence to Offline immediately
+        rtdb.ref('/status/' + prevUser.uid).set({
+            isOnline: false,
+            last_changed: firebase.database.ServerValue.TIMESTAMP
+        }).catch(err => {
+            console.error("Failed to update RTDB status on logout:", err);
         });
     }
     // Update the ref for the next render.

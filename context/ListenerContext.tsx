@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
-import { db } from '../utils/firebase';
+import { db, rtdb } from '../utils/firebase';
 import type { ListenerProfile } from '../types';
 
 interface ListenerContextType {
@@ -38,10 +38,7 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
     // Firestore listener for profile data
     const unsubscribeFirestore = listenerRef.onSnapshot(doc => {
       if (doc.exists) {
-        const data = doc.data() as ListenerProfile;
-        // Add the isOnline field to the profile type if it doesn't exist for type safety
-        const profileWithPresence = { ...data, isOnline: data.isOnline ?? (data.appStatus === 'Available') };
-        setProfile(profileWithPresence);
+        setProfile(doc.data() as ListenerProfile);
       } else {
         console.warn("Listener profile not found in Firestore for UID:", user.uid);
         setProfile(null);
@@ -52,14 +49,28 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
       setProfile(null);
       setLoading(false);
     });
-    
-    // The RTDB presence system has been removed to allow the app to be "online"
-    // for push notifications even when the browser tab is closed. The user's
-    // online status is now managed directly through Firestore via the dashboard toggle,
-    // logout actions, and call status.
+
+    // --- Automatic Presence System using Realtime Database ---
+    const statusRef = rtdb.ref('/status/' + user.uid);
+    const connectedRef = rtdb.ref('.info/connected');
+
+    const connectedListener = connectedRef.on('value', (snap) => {
+      if (snap.val() === true) {
+        // We're connected (or reconnected). Go online.
+        statusRef.set({ isOnline: true, last_changed: firebase.database.ServerValue.TIMESTAMP });
+
+        // When the client disconnects, update their status to offline.
+        // This is the core of the presence system.
+        statusRef.onDisconnect().set({ isOnline: false, last_changed: firebase.database.ServerValue.TIMESTAMP });
+      }
+    });
 
     return () => {
       unsubscribeFirestore();
+      connectedRef.off('value', connectedListener); // Detach the listener
+      // On clean component unmount, set offline status. This isn't strictly necessary
+      // because onDisconnect handles browser close, but it provides a faster response.
+      statusRef.set({ isOnline: false, last_changed: firebase.database.ServerValue.TIMESTAMP });
     };
   }, [user]);
 

@@ -116,13 +116,10 @@ const StatusToggle: React.FC = () => {
         try {
             const listenerRef = db.collection('listeners').doc(profile.uid);
             
-            // This is the core change. We now control 'isOnline' directly.
-            // When 'Available', isOnline is true. Otherwise, it's false.
-            const isOnlineUpdate = newStatus === 'Available';
-
+            // The toggle now ONLY controls availability (`appStatus`).
+            // The `isOnline` field is now handled automatically by the RTDB presence system.
             await listenerRef.update({
                 appStatus: newStatus,
-                isOnline: isOnlineUpdate,
             });
 
         } catch (error) {
@@ -153,24 +150,27 @@ const StatusToggle: React.FC = () => {
     
     const getSubtitle = () => {
         switch (optimisticStatus) {
-            case 'Available': return 'You are online and ready for calls.';
-            case 'Busy': return 'You are currently busy.';
+            case 'Available': return 'You are available for notifications.';
+            case 'Busy': return 'You are currently busy in a call.';
             case 'Break': return 'You are on a break.';
             case 'Offline':
-            default: return 'You are offline.';
+            default: return 'You are offline and won\'t get notifications.';
         }
     };
     
     // User cannot change status if they are busy or on a break
     const isLocked = optimisticStatus === 'Busy' || optimisticStatus === 'Break';
     
-    // For the UI, if the status is Busy or Break, we'll show it as "Online" visually but locked.
-    const isOnline = optimisticStatus === 'Available' || isLocked;
+    // The toggle's visual state is based on availability ('Available').
+    const isAvailable = optimisticStatus === 'Available';
 
     return (
         <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm flex items-center justify-between gap-4">
             <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Active Status</h3>
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    Availability
+                    {profile.isOnline && <span className="w-2.5 h-2.5 bg-green-500 rounded-full" title="App is currently active"></span>}
+                </h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{getSubtitle()}</p>
             </div>
 
@@ -178,9 +178,9 @@ const StatusToggle: React.FC = () => {
                 {/* Sliding Background */}
                 <div
                     className={`absolute top-1 bottom-1 left-1 w-[calc(50%-4px)] shadow-sm rounded-full transition-all duration-300 ease-in-out ${
-                        isOnline ? 'bg-green-500' : 'bg-slate-600 dark:bg-slate-900'
+                        isAvailable ? 'bg-green-500' : 'bg-slate-600 dark:bg-slate-900'
                     }`}
-                    style={{ transform: isOnline ? 'translateX(100%)' : 'translateX(0)' }}
+                    style={{ transform: isAvailable ? 'translateX(100%)' : 'translateX(0)' }}
                 />
                 
                 {/* Buttons */}
@@ -188,9 +188,9 @@ const StatusToggle: React.FC = () => {
                     onClick={() => handleStatusChange('Offline')}
                     disabled={isLocked}
                     className={`relative z-10 w-20 py-1.5 text-sm font-semibold rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-colors duration-300 ${
-                        !isOnline ? 'text-white' : 'text-slate-500 dark:text-slate-300'
+                        !isAvailable ? 'text-white' : 'text-slate-500 dark:text-slate-300'
                     }`}
-                    aria-pressed={!isOnline}
+                    aria-pressed={!isAvailable}
                 >
                     Offline
                 </button>
@@ -198,9 +198,9 @@ const StatusToggle: React.FC = () => {
                     onClick={() => handleStatusChange('Available')}
                     disabled={isLocked}
                     className={`relative z-10 w-20 py-1.5 text-sm font-semibold rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 transition-colors duration-300 ${
-                        isOnline ? 'text-white' : 'text-slate-500 dark:text-slate-300'
+                        isAvailable ? 'text-white' : 'text-slate-500 dark:text-slate-300'
                     }`}
-                    aria-pressed={isOnline}
+                    aria-pressed={isAvailable}
                 >
                     Online
                 </button>
