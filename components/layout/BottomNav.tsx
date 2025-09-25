@@ -1,7 +1,6 @@
 import React from 'react';
-// FIX: Split react-router-dom imports to resolve export errors. Core hooks are now imported from 'react-router' and DOM-specific components from 'react-router-dom'.
-import { useResolvedPath, useMatch } from 'react-router';
-import { Link } from 'react-router-dom';
+// FIX: Corrected react-router imports. In v6, hooks and components should be imported from 'react-router-dom'.
+import { useResolvedPath, useMatch, Link } from 'react-router-dom';
 
 const navItems = [
   { path: '/dashboard', label: 'Dashboard', icon: (active: boolean) => <IconDashboard active={active} /> },

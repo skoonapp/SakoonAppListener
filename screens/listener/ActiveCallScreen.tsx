@@ -2,9 +2,11 @@
 
 
 
+
+
 import React, { useEffect, useRef, useState } from 'react';
-// FIX: Changed import from 'react-router-dom' to 'react-router' to resolve module export errors for hooks.
-import { useParams, useNavigate } from 'react-router';
+// FIX: Corrected react-router import. In v6, hooks should be imported from 'react-router-dom'.
+import { useParams, useNavigate } from 'react-router-dom';
 import { db } from '../../utils/firebase';
 import { fetchZegoToken } from '../../utils/zego';
 import { useListener } from '../../context/ListenerContext';

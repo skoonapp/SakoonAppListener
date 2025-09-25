@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
-// FIX: Changed import from 'react-router-dom' to 'react-router' to resolve module export errors for hooks.
-import { useLocation, useNavigate } from 'react-router';
+// FIX: Corrected react-router import. In v6, hooks should be imported from 'react-router-dom'.
+import { useLocation, useNavigate } from 'react-router-dom';
 import BottomNav from './BottomNav';
 import IncomingCallManager from '../calls/IncomingCallManager';
 import Header from '../common/Header';

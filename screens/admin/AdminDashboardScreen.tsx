@@ -3,8 +3,7 @@ import firebase from 'firebase/compat/app';
 import { db, functions, auth, rtdb } from '../../utils/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { ListenerProfile, Application } from '../../types';
-import { useNavigate } from 'react-router';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 // --- Reusable Notification Banner ---
 const NotificationBanner: React.FC<{ message: string; type: 'error' | 'success'; onDismiss: () => void; }> = ({ message, type, onDismiss }) => {
