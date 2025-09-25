@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useListener } from '../../context/ListenerContext';
 import { db, storage } from '../../utils/firebase';
 import type { ListenerChatSession, ChatMessage, CallRecord } from '../../types';
@@ -6,6 +6,7 @@ import MessageBubble from '../../components/chat/MessageBubble';
 import ChatInput from '../../components/chat/ChatInput';
 import firebase from 'firebase/compat/app';
 import { useNotification } from '../../context/NotificationContext';
+import { usePTR } from '../../context/PTRContext';
 
 const formatSessionTime = (timestamp: firebase.firestore.Timestamp | undefined): string => {
     if (!timestamp) return '';
@@ -34,6 +35,19 @@ const ChatScreen: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const { showNotification } = useNotification();
+    const { enablePTR, disablePTR } = usePTR();
+
+    const handleRefresh = useCallback(async () => {
+        // Since chat sessions are real-time, this provides a UX confirmation of a sync.
+        console.log("Refreshing chat sessions...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }, []);
+
+    useEffect(() => {
+        enablePTR(handleRefresh);
+        return () => disablePTR();
+    }, [enablePTR, disablePTR, handleRefresh]);
+
 
     // Fetch chat sessions
     useEffect(() => {

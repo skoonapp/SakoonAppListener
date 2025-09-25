@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { auth, db } from '../../utils/firebase';
-// FIX: Corrected react-router import. In v6, hooks should be imported from 'react-router-dom'.
 import { useNavigate } from 'react-router-dom';
 import { GuidelinesContent } from '../../components/profile/ListenerGuidelines';
 import { useListener } from '../../context/ListenerContext';
 import { TermsContent } from './TermsScreen';
 import { PrivacyPolicyContent } from './PrivacyPolicyScreen';
+import { usePTR } from '../../context/PTRContext';
 
 // --- Reusable Notification Banner ---
 const NotificationBanner: React.FC<{ message: string; type: 'error' | 'success'; onDismiss: () => void; }> = ({ message, type, onDismiss }) => {
@@ -105,11 +105,17 @@ const ProfileScreen: React.FC = () => {
     const isInitialLoad = useRef(true);
     const [openAccordion, setOpenAccordion] = useState<string | null>(null);
     const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
+    const { disablePTR } = usePTR();
 
     const [localSettings, setLocalSettings] = useState({
         calls: true,
         messages: true,
     });
+    
+    useEffect(() => {
+        disablePTR();
+        return () => disablePTR();
+    }, [disablePTR]);
 
     useEffect(() => {
         if (profile?.notificationSettings && isInitialLoad.current) {

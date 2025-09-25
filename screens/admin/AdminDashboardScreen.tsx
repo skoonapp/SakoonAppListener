@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import firebase from 'firebase/compat/app';
 import { db, functions, auth, rtdb } from '../../utils/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { ListenerProfile, Application } from '../../types';
 import { useNavigate, Link } from 'react-router-dom';
+import { usePTR } from '../../context/PTRContext';
 
 // --- Reusable Notification Banner ---
 const NotificationBanner: React.FC<{ message: string; type: 'error' | 'success'; onDismiss: () => void; }> = ({ message, type, onDismiss }) => {
@@ -83,6 +84,7 @@ const AdminDashboardScreen: React.FC = () => {
   const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
   const [onlineCount, setOnlineCount] = useState(0);
   const navigate = useNavigate();
+  const { enablePTR, disablePTR } = usePTR();
 
   const handleLogout = async () => {
     try {
@@ -93,33 +95,13 @@ const AdminDashboardScreen: React.FC = () => {
         setNotification({ message: 'Could not log out. Please try again.', type: 'error' });
     }
   };
-
-  useEffect(() => {
-    // Real-time listener for online users
-    const statusRef = rtdb.ref('status');
-    statusRef.on('value', (snapshot) => {
-        const statuses = snapshot.val();
-        if (statuses) {
-            const count = Object.values(statuses).filter((s: any) => s.isOnline).length;
-            setOnlineCount(count);
-        } else {
-            setOnlineCount(0);
-        }
-    });
-
-    return () => statusRef.off();
-  }, []);
-
-  useEffect(() => {
-    setLoading(true);
-    setStatsLoading(true);
-
-    const fetchStats = async () => {
+  
+  const fetchStats = useCallback(async () => {
+      setStatsLoading(true);
       try {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-        // --- Parallel fetching for performance ---
         const [
           activeListenersSnap,
           todayCallsSnap,
@@ -152,9 +134,33 @@ const AdminDashboardScreen: React.FC = () => {
       } finally {
         setStatsLoading(false);
       }
-    };
-    
-    fetchStats();
+    }, []);
+
+  // Effect for PTR
+  useEffect(() => {
+    enablePTR(fetchStats);
+    return () => disablePTR();
+  }, [enablePTR, disablePTR, fetchStats]);
+
+  useEffect(() => {
+    // Real-time listener for online users
+    const statusRef = rtdb.ref('status');
+    statusRef.on('value', (snapshot) => {
+        const statuses = snapshot.val();
+        if (statuses) {
+            const count = Object.values(statuses).filter((s: any) => s.isOnline).length;
+            setOnlineCount(count);
+        } else {
+            setOnlineCount(0);
+        }
+    });
+
+    return () => statusRef.off();
+  }, []);
+
+  useEffect(() => {
+    setLoading(true);
+    fetchStats(); // Initial fetch
 
     // More efficient query to only fetch applications with 'pending' status.
     const unsubApplications = db.collection('applications')
@@ -190,7 +196,7 @@ const AdminDashboardScreen: React.FC = () => {
       unsubApplications();
       unsubOnboarding();
     };
-  }, []);
+  }, [fetchStats]);
 
   const handleApplicationAction = async (application: Application, action: 'approve' | 'reject') => {
     if (!application.id) return;

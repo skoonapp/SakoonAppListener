@@ -43,8 +43,8 @@ const AuthenticatedApp: React.FC<{ user: firebase.User; authStatus: AuthStatus }
           <Route path="*" element={<Navigate to="/pending-approval" replace />} />
         </>}
         {authStatus === 'admin' && <>
-          <Route path="/admin/listeners" element={<ListenerManagementScreen />} />
-          <Route path="/admin" element={<AdminDashboardScreen />} />
+          <Route path="/admin/listeners" element={<MainLayout showNav={false}><ListenerManagementScreen /></MainLayout>} />
+          <Route path="/admin" element={<MainLayout showNav={false}><AdminDashboardScreen /></MainLayout>} />
           <Route path="*" element={<Navigate to="/admin" replace />} />
         </>}
         {authStatus === 'unauthorized' && <>

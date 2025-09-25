@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import PolicyPageLayout from '../../components/common/PolicyPageLayout';
+import { usePTR } from '../../context/PTRContext';
 
 export const TermsContent: React.FC = () => {
     const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -89,6 +90,13 @@ export const TermsContent: React.FC = () => {
 };
 
 const TermsScreen: React.FC = () => {
+    const { disablePTR } = usePTR();
+
+    useEffect(() => {
+        disablePTR();
+        return () => disablePTR();
+    }, [disablePTR]);
+
     return (
         <PolicyPageLayout title="Terms & Conditions">
             <TermsContent />

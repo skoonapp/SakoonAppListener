@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useListener } from '../../context/ListenerContext';
 import { db } from '../../utils/firebase';
 import type { EarningRecord } from '../../types';
+import { usePTR } from '../../context/PTRContext';
 
 // --- Icons ---
 const TotalEarningsIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white/80" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg>;
@@ -95,6 +96,18 @@ const EarningsScreen: React.FC = () => {
     const [earnings, setEarnings] = useState<EarningsData>({ total: 0, today: 0, last7Days: 0, last30Days: 0 });
     const [transactions, setTransactions] = useState<EarningRecord[]>([]);
     const [advancedStats, setAdvancedStats] = useState<AdvancedStats>({ avgDaily: 0, bestDay: { date: '', amount: 0 } });
+    const { enablePTR, disablePTR } = usePTR();
+
+    const handleRefresh = useCallback(async () => {
+        // Since the data is real-time with onSnapshot, a "refresh" is mostly for UX.
+        console.log("Refreshing earnings data...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }, []);
+
+    useEffect(() => {
+        enablePTR(handleRefresh);
+        return () => disablePTR();
+    }, [enablePTR, disablePTR, handleRefresh]);
 
     useEffect(() => {
         if (!profile?.uid) {

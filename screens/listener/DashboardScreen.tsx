@@ -1,16 +1,14 @@
-import React, { useState, useEffect, useMemo } from 'react';
-// FIX: The import for `Link` is correct for react-router-dom v5. The error was likely a cascading issue from other files using v6 syntax.
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useListener } from '../../context/ListenerContext';
 import { db } from '../../utils/firebase';
 import firebase from 'firebase/compat/app';
-// Fix: Use ListenerAppStatus instead of the non-existent ListenerStatus.
 import type { CallRecord, ListenerChatSession, ListenerAppStatus } from '../../types';
 import InstallPWAButton from '../../components/common/InstallPWAButton';
 import { useNotification } from '../../context/NotificationContext';
+import { usePTR } from '../../context/PTRContext';
 
 // Type definitions for combined activity feed
-// Fix: Use Omit to prevent type conflict on 'type' property from CallRecord.
 type CallActivity = Omit<CallRecord, 'type'> & { type: 'call'; timestamp: firebase.firestore.Timestamp; };
 type ChatActivity = ListenerChatSession & { type: 'chat'; timestamp: firebase.firestore.Timestamp; };
 type Activity = CallActivity | ChatActivity;
@@ -63,7 +61,6 @@ const StatCard: React.FC<{ title: string; value: React.ReactNode; icon: React.Re
     return linkTo ? <Link to={linkTo} className="focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-xl">{content}</Link> : content;
 };
 
-// Fix: Refactor ActivityRow to safely access properties based on activity type.
 const ActivityRow: React.FC<{ activity: Activity }> = ({ activity }) => {
     const isCall = activity.type === 'call';
 
@@ -211,6 +208,19 @@ const DashboardScreen: React.FC = () => {
     const [loadingActivities, setLoadingActivities] = useState(true);
     const [earningsData, setEarningsData] = useState<{ today: number, week: number }>({ today: 0, week: 0 });
     const [loadingEarnings, setLoadingEarnings] = useState(true);
+    const { enablePTR, disablePTR } = usePTR();
+
+    const handleRefresh = useCallback(async () => {
+        console.log("Refreshing dashboard...");
+        // Since data is real-time via onSnapshot, this is for UX feedback
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }, []);
+
+    useEffect(() => {
+        enablePTR(handleRefresh);
+        return () => disablePTR();
+    }, [enablePTR, disablePTR, handleRefresh]);
+
 
     useEffect(() => {
         if (!profile?.uid) {

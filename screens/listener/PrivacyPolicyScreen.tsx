@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import PolicyPageLayout from '../../components/common/PolicyPageLayout';
+import { usePTR } from '../../context/PTRContext';
 
 export const PrivacyPolicyContent: React.FC = () => {
     const today = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -66,6 +67,13 @@ export const PrivacyPolicyContent: React.FC = () => {
 };
 
 const PrivacyPolicyScreen: React.FC = () => {
+    const { disablePTR } = usePTR();
+
+    useEffect(() => {
+        disablePTR();
+        return () => disablePTR();
+    }, [disablePTR]);
+
     return (
         <PolicyPageLayout title="Privacy Policy">
             <PrivacyPolicyContent />

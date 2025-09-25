@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db } from '../../utils/firebase';
 import { useListener } from '../../context/ListenerContext';
 import type { CallRecord } from '../../types';
 import CallHistoryCard from '../../components/calls/CallHistoryCard';
+import { usePTR } from '../../context/PTRContext';
 
 type StatusFilter = 'all' | 'completed' | 'missed' | 'rejected';
 type DateFilter = 'all' | 'today' | '7d' | '30d';
@@ -42,6 +43,20 @@ const CallsScreen: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
     const [dateFilter, setDateFilter] = useState<DateFilter>('all');
+    const { enablePTR, disablePTR } = usePTR();
+
+    const handleRefresh = useCallback(async () => {
+        // Since the data is real-time with onSnapshot, a "refresh" is mostly for UX.
+        // We can simulate a delay to make the refresh action feel responsive.
+        console.log("Refreshing call history...");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }, []);
+
+    useEffect(() => {
+        enablePTR(handleRefresh);
+        return () => disablePTR();
+    }, [enablePTR, disablePTR, handleRefresh]);
+
 
     useEffect(() => {
         if (!profile?.uid) return;

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { db } from '../../utils/firebase';
 import type { ListenerProfile, ListenerAccountStatus } from '../../types';
 import ListenerRow from '../../components/admin/ListenerRow';
 import type firebase from 'firebase/compat/app';
+import { usePTR } from '../../context/PTRContext';
 
 // --- Reusable Notification Banner ---
 const NotificationBanner: React.FC<{ message: string; type: 'error' | 'success'; onDismiss: () => void; }> = ({ message, type, onDismiss }) => {
@@ -37,37 +38,45 @@ const ListenerManagementScreen: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [notification, setNotification] = useState<{message: string, type: 'error' | 'success'} | null>(null);
     const [updatingUids, setUpdatingUids] = useState<string[]>([]);
+    const { enablePTR, disablePTR } = usePTR();
+
+    const fetchInitialListeners = useCallback(async () => {
+        setLoading(true);
+        try {
+            const query = db.collection('listeners')
+                .orderBy('createdAt', 'desc')
+                .limit(PAGE_SIZE);
+            
+            const snapshot = await query.get();
+            
+            const listenersData = snapshot.docs.map(doc => doc.data() as ListenerProfile);
+            setListeners(listenersData);
+            
+            const lastVisible = snapshot.docs[snapshot.docs.length - 1];
+            setLastDoc(lastVisible);
+            
+            setHasMore(snapshot.docs.length === PAGE_SIZE);
+        } catch (error: any) {
+            console.error("Error fetching listeners:", error);
+            let detailedMessage = 'Failed to fetch initial listeners.';
+            if (error.message && error.message.includes('firestore/indexes')) {
+                detailedMessage += ' A Firestore index is required. Please check the browser console for a link to create it.';
+            }
+            setNotification({ message: detailedMessage, type: 'error' });
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
-        const fetchInitialListeners = async () => {
-            setLoading(true);
-            try {
-                const query = db.collection('listeners')
-                    .orderBy('createdAt', 'desc')
-                    .limit(PAGE_SIZE);
-                
-                const snapshot = await query.get();
-                
-                const listenersData = snapshot.docs.map(doc => doc.data() as ListenerProfile);
-                setListeners(listenersData);
-                
-                const lastVisible = snapshot.docs[snapshot.docs.length - 1];
-                setLastDoc(lastVisible);
-                
-                setHasMore(snapshot.docs.length === PAGE_SIZE);
-            } catch (error: any) {
-                console.error("Error fetching listeners:", error);
-                let detailedMessage = 'Failed to fetch initial listeners.';
-                if (error.message && error.message.includes('firestore/indexes')) {
-                    detailedMessage += ' A Firestore index is required. Please check the browser console for a link to create it.';
-                }
-                setNotification({ message: detailedMessage, type: 'error' });
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchInitialListeners();
-    }, []);
+    }, [fetchInitialListeners]);
+    
+    useEffect(() => {
+        enablePTR(fetchInitialListeners);
+        return () => disablePTR();
+    }, [enablePTR, disablePTR, fetchInitialListeners]);
+
 
     const handleLoadMore = async () => {
         if (!lastDoc || loadingMore || !hasMore) return;
