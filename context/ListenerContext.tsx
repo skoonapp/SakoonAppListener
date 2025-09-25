@@ -123,7 +123,10 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
             });
         }
     };
-  }, [user, profile]); // Depend on both user and profile to differentiate admins from listeners.
+    // FIX: Changed dependency array to prevent an infinite loop. The presence logic should only
+    // re-run if the user changes or their admin status changes, not on every minor profile
+    // update like `isOnline` or `lastActive`, which this effect causes itself.
+  }, [user, profile?.uid, profile?.isAdmin]); 
 
   return (
     <ListenerContext.Provider value={{ profile, loading }}>
