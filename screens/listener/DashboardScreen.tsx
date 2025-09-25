@@ -125,8 +125,6 @@ const StatusToggle: React.FC = () => {
                 isOnline: isOnlineUpdate,
             });
 
-            // The Realtime Database logic has been removed to fix the presence issue.
-
         } catch (error) {
             console.error("Failed to update status:", error);
             setOptimisticStatus(previousStatus);

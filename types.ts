@@ -17,7 +17,7 @@ export interface ListenerProfile {
   createdAt: firebase.firestore.Timestamp;
   onboardingComplete: boolean;
   isAdmin: boolean;
-  isOnline?: boolean; // Represents live connection status for receiving calls.
+  isOnline?: boolean; // Represents live connection status, now controlled by client.
   profession: string;
   languages: string[];
   avatarUrl: string;

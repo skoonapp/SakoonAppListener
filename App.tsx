@@ -85,7 +85,7 @@ const App: React.FC = () => {
         // Set their status to offline on clean logout.
         db.collection('listeners').doc(prevUser.uid).update({
             appStatus: 'Offline',
-            isOnline: false, // Also update isOnline if the field is still in use.
+            isOnline: false,
         }).catch(err => {
             console.error("Failed to update listener status on logout:", err);
         });
