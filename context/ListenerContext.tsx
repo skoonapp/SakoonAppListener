@@ -50,27 +50,40 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
       setLoading(false);
     });
 
-    // --- Automatic Presence System using Realtime Database ---
+    // --- Automatic Presence System using Realtime Database (REVISED & ROBUST PATTERN) ---
     const statusRef = rtdb.ref('/status/' + user.uid);
     const connectedRef = rtdb.ref('.info/connected');
 
     const connectedListener = connectedRef.on('value', (snap) => {
       if (snap.val() === true) {
-        // We're connected (or reconnected). Go online.
-        statusRef.set({ isOnline: true, last_changed: firebase.database.ServerValue.TIMESTAMP });
-
-        // When the client disconnects, update their status to offline.
-        // This is the core of the presence system.
-        statusRef.onDisconnect().set({ isOnline: false, last_changed: firebase.database.ServerValue.TIMESTAMP });
+        // We're connected (or reconnected).
+        // First, register the onDisconnect handler. This is a promise that resolves
+        // once the write is confirmed by the RTDB servers.
+        statusRef.onDisconnect().set({
+            isOnline: false,
+            last_changed: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            // Once onDisconnect is established, set the online status.
+            statusRef.set({
+                isOnline: true,
+                last_changed: firebase.database.ServerValue.TIMESTAMP
+            });
+        }).catch(err => {
+            console.error("Could not establish onDisconnect handler:", err);
+        });
       }
+      // Note: We don't need an `else` block. The `onDisconnect` handler will
+      // take care of setting the status to offline when the connection is lost.
     });
 
     return () => {
       unsubscribeFirestore();
-      connectedRef.off('value', connectedListener); // Detach the listener
-      // On clean component unmount, set offline status. This isn't strictly necessary
-      // because onDisconnect handles browser close, but it provides a faster response.
-      statusRef.set({ isOnline: false, last_changed: firebase.database.ServerValue.TIMESTAMP });
+      // Detach the .info/connected listener to prevent memory leaks on unmount.
+      connectedRef.off('value', connectedListener);
+      // We no longer manually set status to offline here.
+      // The `onDisconnect` handler is the source of truth for all disconnects.
+      // Explicit logout is handled separately in App.tsx. This change also
+      // correctly supports having the app open in multiple tabs.
     };
   }, [user]);
 
