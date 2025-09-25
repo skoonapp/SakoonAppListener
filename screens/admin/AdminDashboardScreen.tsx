@@ -133,10 +133,20 @@ const AdminDashboardScreen: React.FC = () => {
         setNotification({ message: 'Failed to load onboarding listeners.', type: 'error' });
       });
       
-    const unsubOnline = db.collection('listeners').where('appStatus', '==', 'Available')
+    const unsubOnline = db.collection('listeners')
+        .where('appStatus', '==', 'Available')
+        .where('isOnline', '==', true) // More accurate online status
         .onSnapshot(snapshot => {
             setStats(prev => ({ ...prev, onlineListeners: snapshot.size }));
             setStatsLoading(false);
+        }, (err: any) => {
+          console.error("Error fetching online listeners:", err);
+          // Provide a helpful error if the composite index is missing
+          if (err.message.includes('firestore/indexes')) {
+              console.error("Firestore composite index required. Please create it using the link in the error message.");
+              setNotification({ message: 'A database index is required to view online listeners. See console for details.', type: 'error' });
+          }
+          setStatsLoading(false);
         });
         
     const unsubActive = db.collection('listeners').where('status', '==', 'active')
