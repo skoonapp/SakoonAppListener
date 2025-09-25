@@ -114,7 +114,13 @@ const StatusToggle: React.FC = () => {
         setOptimisticStatus(newStatus); 
 
         try {
-            await db.collection('listeners').doc(profile.uid).update({ appStatus: newStatus });
+            const listenerRef = db.collection('listeners').doc(profile.uid);
+            // This update now includes the deletion of old presence fields.
+            await listenerRef.update({
+                appStatus: newStatus,
+                isOnline: firebase.firestore.FieldValue.delete(),
+                lastActive: firebase.firestore.FieldValue.delete()
+            });
         } catch (error) {
             console.error("Failed to update status:", error);
             setOptimisticStatus(previousStatus);
