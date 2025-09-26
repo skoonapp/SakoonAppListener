@@ -51,9 +51,8 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
     return () => unsubscribe();
   }, [user]);
 
-  // Effect 2: Manage Realtime Database presence. This is the definitive fix.
+  // Effect 2: Manage Realtime Database presence with separated logic.
   useEffect(() => {
-    // Exit early if we don't have the necessary user and profile data.
     if (!user || !profile) {
       return;
     }
@@ -62,48 +61,50 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
     const statusRef = rtdb.ref(`/status/${uid}`);
     const connectedRef = rtdb.ref('.info/connected');
 
-    // This listener handles both initial connection and any subsequent profile changes.
-    // Re-attaching it in the effect hook causes it to fire with the current connection state.
+    // --- Part A: Direct Status Sync ---
+    // This runs every time the profile changes, ensuring RTDB is always in sync with Firestore `appStatus`.
+    // This is the definitive fix for the 'isOnline' bug.
+    const isListenerAvailable = profile.appStatus === 'Available';
+    const currentStatusPayload = {
+        isOnline: isListenerAvailable,
+        lastActive: firebase.database.ServerValue.TIMESTAMP,
+        appStatus: profile.appStatus,
+    };
+
+    statusRef.set(currentStatusPayload)
+        .catch(err => console.error("Direct RTDB sync failed:", err));
+
+    // --- Part B: Connection State Management ---
+    // This sets up the "last will" for abrupt disconnects and handles re-connection.
     const listener = connectedRef.on('value', (snap) => {
-        // If we're not connected, we can't do anything. The onDisconnect will handle it.
         if (snap.val() === false) {
+            // We are disconnected. The onDisconnect() handler set below will take care of updating the status.
             return;
         }
 
-        // --- We are connected ---
-
-        // 1. Set the "last will". This is what the server will do if we disconnect unexpectedly.
-        // It uses the latest appStatus from the profile in the closure.
+        // We are connected (or have just re-connected).
+        // 1. Set the onDisconnect "last will". This must be set every time we connect.
         const onDisconnectPayload = {
             isOnline: false, // Disconnected always means not online.
             lastActive: firebase.database.ServerValue.TIMESTAMP,
             appStatus: profile.appStatus, // Preserve the listener's manually set status.
         };
-
         statusRef.onDisconnect().set(onDisconnectPayload)
             .catch(err => console.error("RTDB onDisconnect setup failed:", err));
 
-        // 2. Set the CURRENT status. This is the crucial part that fixes the bug.
-        // This code runs whenever we are connected AND whenever the `profile` object changes,
-        // because the effect re-runs and re-attaches this listener.
-        const isListenerAvailable = profile.appStatus === 'Available';
-
-        const currentStatusPayload = {
-            isOnline: isListenerAvailable, // This value is now correctly tied to appStatus.
-            lastActive: firebase.database.ServerValue.TIMESTAMP,
-            appStatus: profile.appStatus,
-        };
-
+        // 2. When we connect or re-connect, re-apply the current status. This is important
+        // because the onDisconnect handler might have just fired if it was a brief disconnect.
         statusRef.set(currentStatusPayload)
-            .catch(err => console.error("RTDB failed to set current status:", err));
+            .catch(err => console.error("RTDB re-connect sync failed:", err));
     });
 
-    // Cleanup: Remove the listener when the component unmounts or dependencies change
-    // to prevent memory leaks and redundant listeners.
+    // Cleanup function
     return () => {
+        // Remove the connection listener to prevent memory leaks.
         connectedRef.off('value', listener);
     };
   }, [user, profile]); // CRITICAL: Re-run this whole setup when user or their profile changes.
+
 
   return (
     <ListenerContext.Provider value={{ profile, loading }}>
