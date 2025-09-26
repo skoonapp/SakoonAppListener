@@ -90,10 +90,11 @@ const App: React.FC = () => {
             console.error("Failed to update Firestore status on logout:", err);
         });
 
-        // Set RTDB presence to Offline immediately
+        // Set RTDB presence to Offline immediately, ensuring it passes validation rules.
         rtdb.ref('/status/' + prevUser.uid).set({
             isOnline: false,
-            last_changed: firebase.database.ServerValue.TIMESTAMP
+            lastActive: firebase.database.ServerValue.TIMESTAMP, // Correct field name
+            appStatus: 'Offline' // Include required field
         }).catch(err => {
             console.error("Failed to update RTDB status on logout:", err);
         });
