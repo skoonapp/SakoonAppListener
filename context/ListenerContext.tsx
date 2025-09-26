@@ -23,9 +23,9 @@ interface ListenerProviderProps {
 export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, children }) => {
   const [profile, setProfile] = useState<ListenerProfile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isConnected, setIsConnected] = useState(false);
 
-  // Effect to manage Firestore profile subscription
+  // Effect 1: Subscribe to Firestore profile changes.
+  // This is the single source of truth for the listener's manually set `appStatus`.
   useEffect(() => {
     if (!user) {
       setProfile(null);
@@ -35,12 +35,12 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
 
     setLoading(true);
     const listenerRef = db.collection('listeners').doc(user.uid);
-    const firestoreUnsubscribe = listenerRef.onSnapshot(doc => {
+    const unsubscribe = listenerRef.onSnapshot(doc => {
       setLoading(false);
       if (doc.exists) {
         setProfile(doc.data() as ListenerProfile);
       } else {
-        console.warn("Listener profile not found in Firestore for UID:", user.uid);
+        console.warn("Listener profile not found for UID:", user.uid);
         setProfile(null);
       }
     }, err => {
@@ -49,60 +49,51 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
       setProfile(null);
     });
 
-    return () => firestoreUnsubscribe();
+    return () => unsubscribe();
   }, [user]);
 
-  // Effect to manage RTDB connection state
+  // Effect 2: Manage Realtime Database presence.
+  // This effect runs whenever the profile changes, ensuring the presence logic
+  // always has the latest `appStatus`.
   useEffect(() => {
-    const connectedRef = rtdb.ref('.info/connected');
-    const listener = (snap: firebase.database.DataSnapshot) => {
-      setIsConnected(snap.val() === true);
-    };
-    connectedRef.on('value', listener);
-    return () => connectedRef.off('value', listener);
-  }, []);
+    // Don't manage presence until the profile is fully loaded.
+    if (!profile) return;
 
-
-  // The main presence synchronization effect.
-  // This runs whenever the user's profile or connection status changes.
-  useEffect(() => {
-    if (!profile) {
-      return; // Wait for profile to load
-    }
-    
     const statusRef = rtdb.ref('/status/' + profile.uid);
+    const connectedRef = rtdb.ref('.info/connected');
 
-    // This is the "last will" payload, executed by Firebase servers on ungraceful disconnect.
-    // It should always set isOnline to false. The appStatus is preserved from the last known state.
-    const onDisconnectPayload = {
-      isOnline: false,
-      lastActive: firebase.database.ServerValue.TIMESTAMP,
-      appStatus: profile.appStatus,
+    const listener = (snap: firebase.database.DataSnapshot) => {
+      if (snap.val() === true) {
+        // We are connected.
+
+        // Set the "last will" for ungraceful disconnects.
+        // It should always mark the user as offline, but preserve their last known appStatus.
+        statusRef.onDisconnect().set({
+          isOnline: false,
+          lastActive: firebase.database.ServerValue.TIMESTAMP,
+          appStatus: profile.appStatus, // Use the most recent appStatus from the loaded profile
+        }).catch(err => console.error("RTDB Presence: Failed to set onDisconnect.", err));
+
+        // Set the current status now.
+        // `isOnline` is true ONLY if the listener has set their `appStatus` to 'Available'.
+        const isActuallyOnline = profile.appStatus === 'Available';
+        
+        statusRef.set({
+          isOnline: isActuallyOnline,
+          lastActive: firebase.database.ServerValue.TIMESTAMP,
+          appStatus: profile.appStatus,
+        }).catch(err => console.error("RTDB Presence: Failed to set online status.", err));
+      }
     };
 
-    statusRef.onDisconnect().set(onDisconnectPayload)
-      .catch(err => console.error("RTDB Presence Error: Failed to set onDisconnect.", err));
+    connectedRef.on('value', listener);
 
-    // If we are not connected, we shouldn't try to write our status.
-    // The onDisconnect handler is already set and will take care of things if the connection drops.
-    // When the connection returns, `isConnected` will become true, and this effect will run again.
-    if (isConnected) {
-      // Determine the correct online status. A user is only "online" if their app is connected
-      // AND they have manually set their status to "Available".
-      const shouldBeOnline = profile.appStatus === 'Available';
-
-      const currentStatusPayload = {
-        isOnline: shouldBeOnline,
-        lastActive: firebase.database.ServerValue.TIMESTAMP,
-        appStatus: profile.appStatus,
-      };
-
-      statusRef.set(currentStatusPayload)
-        .catch(err => console.error("RTDB Presence Error: Failed to set current status.", err));
-    }
-
-  }, [profile, isConnected]); // This is the key: react to both profile and connection changes.
-
+    return () => {
+      // Cleanup: remove the listener when the component unmounts or the profile changes,
+      // preventing multiple listeners from being attached.
+      connectedRef.off('value', listener);
+    };
+  }, [profile]); // Key dependency: This ENTIRE effect re-runs when `profile` changes.
 
   return (
     <ListenerContext.Provider value={{ profile, loading }}>
