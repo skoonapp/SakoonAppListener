@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { auth, db } from '../../utils/firebase';
+import { auth, db, rtdb } from '../../utils/firebase';
 import { useNavigate } from 'react-router-dom';
 import { GuidelinesContent } from '../../components/profile/ListenerGuidelines';
 import { useListener } from '../../context/ListenerContext';
 import { TermsContent } from './TermsScreen';
 import { PrivacyPolicyContent } from './PrivacyPolicyScreen';
 import { usePTR } from '../../context/PTRContext';
+import firebase from 'firebase/compat/app';
 
 // --- Reusable Notification Banner ---
 const NotificationBanner: React.FC<{ message: string; type: 'error' | 'success'; onDismiss: () => void; }> = ({ message, type, onDismiss }) => {
@@ -132,11 +133,44 @@ const ProfileScreen: React.FC = () => {
     };
 
     const handleLogout = async () => {
+        if (!profile) {
+            // Fallback for safety, though profile should always be available here.
+            try {
+                await auth.signOut();
+                navigate('/login');
+            } catch (error) {
+                 console.error('Error signing out without profile context: ', error);
+            }
+            return;
+        }
+    
         try {
+            // Step 1: Proactively set status to offline while still authenticated.
+            const listenerRef = db.collection('listeners').doc(profile.uid);
+            const statusRef = rtdb.ref('/status/' + profile.uid);
+    
+            const firestoreUpdate = listenerRef.update({ appStatus: 'Offline' });
+            const rtdbUpdate = statusRef.set({
+                isOnline: false,
+                lastActive: firebase.database.ServerValue.TIMESTAMP,
+                appStatus: 'Offline'
+            });
+    
+            await Promise.all([firestoreUpdate, rtdbUpdate]);
+    
+            // Step 2: Now that status is updated, sign the user out.
             await auth.signOut();
-            navigate('/login');
+            
+            // The App component will handle navigation to /login automatically.
+            
         } catch (error) {
-            console.error('Error signing out: ', error);
+            console.error('Error during the logout process: ', error);
+            // Even if updates fail, attempt to log the user out to avoid a stuck state.
+            try {
+                await auth.signOut();
+            } catch (signOutError) {
+                console.error('Critical: Failed to sign out after an error:', signOutError);
+            }
         }
     };
     
