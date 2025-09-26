@@ -52,9 +52,7 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
             // Check connection status before writing to avoid writing while offline.
             connectedRef.once('value', (snap) => {
                 if (snap.val() === true) {
-                    statusRef.set({
-                        isOnline: true,
-                        lastActive: firebase.database.ServerValue.TIMESTAMP,
+                    statusRef.update({ // Use update to only change appStatus
                         appStatus: newProfile.appStatus,
                     });
                 }
@@ -73,18 +71,21 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
       setLoading(false);
     });
 
-    // --- Automatic Presence System using Realtime Database (Revised to pass validation) ---
+    // --- Automatic Presence System using Realtime Database (Revised for background persistence) ---
     const connectedListener = connectedRef.on('value', (snap) => {
       if (snap.val() === true) {
         // We're connected (or reconnected).
-        // First, register the onDisconnect handler.
+        
+        // The onDisconnect handler is a "last will". It executes when the client disconnects uncleanly.
+        // It should ONLY update the live connection status (`isOnline`), not the listener's chosen availability (`appStatus`).
         statusRef.onDisconnect().set({
             isOnline: false,
             lastActive: firebase.database.ServerValue.TIMESTAMP,
-            appStatus: "Offline",
+            // CRITICAL CHANGE: DO NOT set appStatus to 'Offline' here.
+            // This preserves the listener's "Available" status if the app is just backgrounded.
         }).then(() => {
-            // Once onDisconnect is established, set the online status.
-            // Use the most recent profile data from the ref.
+            // Once onDisconnect is established, set the current online status.
+            // Use the most recent profile data from the ref for appStatus.
             statusRef.set({
                 isOnline: true,
                 lastActive: firebase.database.ServerValue.TIMESTAMP,
@@ -100,7 +101,8 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
       unsubscribeFirestore();
       // Detach the .info/connected listener to prevent memory leaks on unmount.
       connectedRef.off('value', connectedListener);
-      // Explicit logout is handled separately in App.tsx. onDisconnect handles all other cases.
+      // Explicit logout is handled separately in App.tsx, which correctly sets status to Offline.
+      // onDisconnect handles all other cases (app crash, network loss, etc.).
     };
   }, [user]);
 
