@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import firebase from 'firebase/compat/app';
 import { db, functions, auth } from '../../utils/firebase';
-import type { ListenerProfile, Application } from '../../types';
+import type { ListenerProfile, Application, CallRecord } from '../../types';
 import { useNavigate, Link } from 'react-router-dom';
 import { usePTR } from '../../context/PTRContext';
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
 
 // --- Reusable Notification Banner ---
 const NotificationBanner: React.FC<{ message: string; type: 'error' | 'success'; onDismiss: () => void; }> = ({ message, type, onDismiss }) => {
@@ -94,6 +96,9 @@ const AdminDashboardScreen: React.FC = () => {
   const [processingAppId, setProcessingAppId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { disablePTR } = usePTR();
+  const [weeklyChartData, setWeeklyChartData] = useState<any[]>([]);
+  const [chartLoading, setChartLoading] = useState(true);
+
 
   const handleLogout = async () => {
     try {
@@ -189,6 +194,59 @@ const AdminDashboardScreen: React.FC = () => {
     };
   }, [disablePTR]);
 
+  // Effect for fetching chart data
+  useEffect(() => {
+    const fetchChartData = async () => {
+        setChartLoading(true);
+        try {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            sevenDaysAgo.setHours(0, 0, 0, 0);
+
+            const snapshot = await db.collection('calls')
+                .where('status', '==', 'completed')
+                .where('startTime', '>=', sevenDaysAgo)
+                .get();
+            
+            const dailyData = new Map<string, { date: string; revenue: number; calls: number }>();
+
+            // Initialize last 7 days in chronological order
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(d.getDate() - i);
+                d.setHours(0, 0, 0, 0);
+                const dateKey = d.toISOString().split('T')[0]; // YYYY-MM-DD
+                dailyData.set(dateKey, {
+                    date: d.toLocaleDateString('en-US', { weekday: 'short' }),
+                    revenue: 0,
+                    calls: 0,
+                });
+            }
+
+            snapshot.docs.forEach(doc => {
+                const call = doc.data() as CallRecord;
+                if (call.startTime) {
+                    const callDate = call.startTime.toDate();
+                    const dateKey = callDate.toISOString().split('T')[0];
+                    if (dailyData.has(dateKey)) {
+                        const day = dailyData.get(dateKey)!;
+                        day.revenue += call.earnings || 0;
+                        day.calls += 1;
+                    }
+                }
+            });
+            
+            setWeeklyChartData(Array.from(dailyData.values()));
+        } catch (err) {
+            console.error("Error fetching chart data:", err);
+            setNotification({ message: 'Failed to load analytics charts.', type: 'error' });
+        } finally {
+            setChartLoading(false);
+        }
+    };
+    fetchChartData();
+  }, []);
+
   const handleApplicationAction = async (application: Application, action: 'approve' | 'reject') => {
     if (!application.id || processingAppId) return;
 
@@ -253,6 +311,63 @@ const AdminDashboardScreen: React.FC = () => {
                 <StatCard title="Active Calls Now" value={stats.activeCallsNow} icon={<PhoneIcon />} loading={statsLoading} />
                 <StatCard title="Active Chats Now" value={`${stats.activeChatsNow}`} icon={<ChatIcon />} loading={statsLoading} />
             </div>
+        </div>
+        
+        {/* Weekly Analytics */}
+        <div>
+            <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200 mb-3">Weekly Analytics</h3>
+            {chartLoading ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm h-[350px] animate-pulse"></div>
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm h-[350px] animate-pulse"></div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Revenue Chart */}
+                    <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
+                        <h4 className="font-bold text-slate-700 dark:text-slate-300 mb-4">Revenue (Last 7 Days)</h4>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <BarChart data={weeklyChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+                                <XAxis dataKey="date" tick={{ fill: 'rgb(100 116 139)', fontSize: 12 }} />
+                                <YAxis tickFormatter={(value) => `₹${value}`} tick={{ fill: 'rgb(100 116 139)', fontSize: 12 }} />
+                                <Tooltip
+                                    formatter={(value: number) => [`₹${value.toFixed(2)}`, 'Revenue']}
+                                    cursor={{ fill: 'rgba(100, 116, 139, 0.1)' }}
+                                    contentStyle={{
+                                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                                        borderColor: 'rgb(51 65 85)',
+                                        borderRadius: '0.5rem',
+                                    }}
+                                />
+                                <Bar dataKey="revenue" fill="#06b6d4" name="Revenue" radius={[4, 4, 0, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+
+                    {/* Call Volume Chart */}
+                     <div className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm">
+                        <h4 className="font-bold text-slate-700 dark:text-slate-300 mb-4">Call Volume (Last 7 Days)</h4>
+                        <ResponsiveContainer width="100%" height={300}>
+                            <LineChart data={weeklyChartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(128, 128, 128, 0.2)" />
+                                <XAxis dataKey="date" tick={{ fill: 'rgb(100 116 139)', fontSize: 12 }} />
+                                <YAxis tick={{ fill: 'rgb(100 116 139)', fontSize: 12 }} allowDecimals={false} />
+                                <Tooltip
+                                    formatter={(value: number) => [value, 'Calls']}
+                                    cursor={{ stroke: 'rgba(100, 116, 139, 0.5)', strokeWidth: 1 }}
+                                    contentStyle={{
+                                        backgroundColor: 'rgba(30, 41, 59, 0.9)',
+                                        borderColor: 'rgb(51 65 85)',
+                                        borderRadius: '0.5rem',
+                                    }}
+                                />
+                                <Line type="monotone" dataKey="calls" stroke="#8b5cf6" strokeWidth={2} activeDot={{ r: 8 }} name="Calls" />
+                            </LineChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            )}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
