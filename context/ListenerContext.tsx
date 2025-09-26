@@ -115,11 +115,11 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
       firestoreUnsubscribe();
       connectedRef.off('value', connectedListener);
       
-      // Explicitly cancel the onDisconnect handler when this component unmounts.
-      // This is important because the component unmounts on logout, and we don't
-      // want the onDisconnect event to fire after a clean logout. The logout logic
-      // in App.tsx will handle setting the user to offline.
-      statusRef.onDisconnect().cancel();
+      // DO NOT cancel the onDisconnect handler here.
+      // The handleLogout function will explicitly set the final state.
+      // If the app is closed abruptly, the onDisconnect that was last set WILL fire,
+      // which is the desired fallback behavior.
+      // statusRef.onDisconnect().cancel();
     };
   }, [user]);
 
