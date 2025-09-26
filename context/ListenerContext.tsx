@@ -51,48 +51,59 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
     return () => unsubscribe();
   }, [user]);
 
-  // Effect 2: Manage Realtime Database presence based on the profile from Firestore.
-  // This is the definitive logic for online status.
+  // Effect 2: Manage Realtime Database presence. This is the definitive fix.
   useEffect(() => {
-    // Wait until we have a user and a profile to work with.
-    if (!user || !profile) return;
+    // Exit early if we don't have the necessary user and profile data.
+    if (!user || !profile) {
+      return;
+    }
 
-    const statusRef = rtdb.ref('/status/' + user.uid);
+    const uid = user.uid;
+    const statusRef = rtdb.ref(`/status/${uid}`);
+    const connectedRef = rtdb.ref('.info/connected');
 
-    // This is the source of truth.
-    // If the user's profile says they want to be 'Available', then isOnline is true.
-    // For any other status (Offline, Busy, etc.), it's false.
-    const isActuallyOnline = profile.appStatus === 'Available';
+    // This listener handles both initial connection and any subsequent profile changes.
+    // Re-attaching it in the effect hook causes it to fire with the current connection state.
+    const listener = connectedRef.on('value', (snap) => {
+        // If we're not connected, we can't do anything. The onDisconnect will handle it.
+        if (snap.val() === false) {
+            return;
+        }
 
-    const statusPayload = {
-        isOnline: isActuallyOnline, // <-- The critical logic
-        lastActive: firebase.database.ServerValue.TIMESTAMP,
-        appStatus: profile.appStatus,
-    };
-    
-    // Set the "last will" for abrupt disconnects (e.g., closing the browser).
-    // If the app closes unexpectedly, they are not online.
-    const onDisconnectPayload = {
-        isOnline: false,
-        lastActive: firebase.database.ServerValue.TIMESTAMP,
-        appStatus: profile.appStatus, // Preserve their chosen status for context
-    };
+        // --- We are connected ---
 
-    statusRef.onDisconnect().set(onDisconnectPayload)
-        .catch(err => console.error("RTDB: Failed to set onDisconnect.", err));
+        // 1. Set the "last will". This is what the server will do if we disconnect unexpectedly.
+        // It uses the latest appStatus from the profile in the closure.
+        const onDisconnectPayload = {
+            isOnline: false, // Disconnected always means not online.
+            lastActive: firebase.database.ServerValue.TIMESTAMP,
+            appStatus: profile.appStatus, // Preserve the listener's manually set status.
+        };
 
-    // Now, set the CURRENT status every time the profile changes.
-    // This is the most important part that fixes the bug.
-    statusRef.set(statusPayload)
-        .catch(err => console.error("RTDB: Failed to set current status on profile update.", err));
-    
-    // The cleanup is handled by the onDisconnect for abrupt closes,
-    // and by the logout function for clean logouts. No extra logic needed here.
+        statusRef.onDisconnect().set(onDisconnectPayload)
+            .catch(err => console.error("RTDB onDisconnect setup failed:", err));
+
+        // 2. Set the CURRENT status. This is the crucial part that fixes the bug.
+        // This code runs whenever we are connected AND whenever the `profile` object changes,
+        // because the effect re-runs and re-attaches this listener.
+        const isListenerAvailable = profile.appStatus === 'Available';
+
+        const currentStatusPayload = {
+            isOnline: isListenerAvailable, // This value is now correctly tied to appStatus.
+            lastActive: firebase.database.ServerValue.TIMESTAMP,
+            appStatus: profile.appStatus,
+        };
+
+        statusRef.set(currentStatusPayload)
+            .catch(err => console.error("RTDB failed to set current status:", err));
+    });
+
+    // Cleanup: Remove the listener when the component unmounts or dependencies change
+    // to prevent memory leaks and redundant listeners.
     return () => {
-      // Intentionally left blank. We don't want to cancel the onDisconnect
-      // unless it's a clean logout, which is handled elsewhere.
+        connectedRef.off('value', listener);
     };
-  }, [user, profile]); // Re-run this entire logic block whenever user or profile changes.
+  }, [user, profile]); // CRITICAL: Re-run this whole setup when user or their profile changes.
 
   return (
     <ListenerContext.Provider value={{ profile, loading }}>
