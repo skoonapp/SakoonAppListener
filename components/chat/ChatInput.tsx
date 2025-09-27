@@ -143,7 +143,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendText, onSendAudio, recentMe
         }
     };
 
-    const stopRecording = (cancel = false) => {
+    const stopRecording = () => {
         if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
             mediaRecorderRef.current.stop();
         }

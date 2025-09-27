@@ -24,5 +24,6 @@
     "noEmit": true,
     "types": ["vite/client"]
   },
-  "include": ["**/*.ts", "**/*.tsx"]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["functions"]
 }

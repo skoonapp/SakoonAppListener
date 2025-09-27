@@ -106,6 +106,7 @@ const IncomingCallManager: React.FC = () => {
     }
 
     const setupNotifications = async () => {
+      if (!messaging) return;
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
