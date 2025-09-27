@@ -1,12 +1,17 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 
+// Ensure Firebase Admin is initialized. This is crucial for the function to work reliably.
+if (admin.apps.length === 0) {
+  admin.initializeApp();
+}
+
 /**
  * CRITICAL FUNCTION for Real-time Status Sync
  * RTDB se Firestore me listener status sync karta hai
  */
 export const onListenerStatusChanged = functions
-  .region("asia-south1")
+  .region("asia-southeast1") // FIX: Changed region to match RTDB instance location
   .database.ref("/status/{uid}")
   .onWrite(async (change, context) => {
     const uid = context.params.uid;
@@ -61,7 +66,7 @@ async function updateListenerFirestoreStatus(uid: string, isOnline: boolean): Pr
  * Force sync listener status - Admin/Manual sync ke liye
  */
 export const forceSyncListenerStatus = functions
-  .region("asia-south1")
+  .region("asia-southeast1")
   .https.onCall(async (data, context) => {
     if (!context.auth) {
       throw new functions.https.HttpsError(
@@ -99,7 +104,7 @@ export const forceSyncListenerStatus = functions
  * Test function - Status sync test karne ke liye
  */
 export const testListenerStatusSync = functions
-  .region("asia-south1")
+  .region("asia-southeast1")
   .https.onRequest(async (req, res) => {
     res.set('Access-Control-Allow-Origin', '*');
     
@@ -160,7 +165,7 @@ export const testListenerStatusSync = functions
  * Batch sync all listeners - Admin ke liye
  */
 export const batchSyncAllListenerStatus = functions
-  .region("asia-south1")
+  .region("asia-southeast1")
   .https.onRequest(async (req, res) => {
     // Simple admin check
     const authToken = req.headers.authorization;
@@ -204,7 +209,7 @@ export const batchSyncAllListenerStatus = functions
  * Cleanup offline listeners - Har 30 minute me run hota hai
  */
 export const cleanupOfflineListeners = functions
-  .region("asia-south1")
+  .region("asia-southeast1")
   .pubsub.schedule('every 30 minutes')
   .onRun(async (context) => {
     functions.logger.log('🧹 Starting offline listeners cleanup');

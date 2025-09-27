@@ -4,10 +4,7 @@
  * यह अलग-अलग फाइलों से सभी फंक्शन्स को इम्पोर्ट और एक्सपोर्ट करती है,
  * ताकि Firebase उन्हें पहचान सके और तैनात (deploy) कर सके।
  */
-import { setGlobalOptions } from 'firebase-functions/v2';
 import * as admin from "firebase-admin";
-
-setGlobalOptions({ region: 'asia-south1' });
 
 // Initialize Firebase Admin SDK
 if (admin.apps.length === 0) {
