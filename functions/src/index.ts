@@ -16,26 +16,16 @@ if (admin.apps.length === 0) {
 // ===================================================================================
 
 // Payment Functions (user/payment.ts से)
-export { createCashfreeOrder, cashfreeWebhook } from './user/payment';
+// Only the webhook is used, which is called by an external service.
+export { cashfreeWebhook } from './user/payment';
 
 // webhook को 'api' नाम से भी export करें
 import { cashfreeWebhook } from './user/payment';
 export { cashfreeWebhook as api };
 
-// Call Request Functions (user/callRequest.ts से)
-export { generateZegoToken } from './user/callRequest';
-
-// Chat Request Functions (user/chatRequest.ts से)
-export { useFreeMessage } from './user/chatRequest';
-
 // Session Functions (user/sessions.ts से)
+// These are Firestore triggers that run automatically.
 export { finalizeCallSession, finalizeChatSession } from './user/sessions';
-
-// History Functions (user/history.ts से)
-export { getRechargeHistory, getUsageHistory } from "./user/history";
-
-// User Functions (user/users.ts से)
-export { updateMyProfile } from "./user/users";
 
 // ===================================================================================
 // LISTENER-SIDE FUNCTIONS (आपके मौजूदा स्ट्रक्चर से)
@@ -47,27 +37,15 @@ export { listener_rejectApplication } from './listener/rejectApplication';
 export { listener_submitListenerApplication } from './listener/submitListenerApplication';
 
 // Listener Auth (जैसे अकाउंट डिलीट होने पर) और Admin Management से जुड़े फ़ंक्शंस
+// This is an auth trigger that runs automatically.
 export { onDeleteListener } from './listener/onDeleteListener';
-export { listener_setAdminRole } from './listener/setAdminRole';
-
-// ===================================================================================
-// ADMIN-SIDE FUNCTIONS
-// ===================================================================================
-
-export { makeAdmin } from "./admin/auth";
-export { getAdminDashboardStats } from "./admin/dashboard";
-export { updateListenerStatusByAdmin } from "./admin/manageListeners";
-export { toggleUserAccountStatus } from "./admin/manageUsers";
 
 // ===================================================================================
 // PRESENCE & UTILITY FUNCTIONS
 // ===================================================================================
 
-// Import each presence function individually to ensure proper TypeScript compilation
+// These are database triggers or scheduled functions that run automatically.
 export { onListenerStatusChanged } from "./utility/presence";
-export { forceSyncListenerStatus } from "./utility/presence";
-export { testListenerStatusSync } from "./utility/presence";
-export { batchSyncAllListenerStatus } from "./utility/presence";
 export { cleanupOfflineListeners } from "./utility/presence";
 
 // ===================================================================================
@@ -75,4 +53,5 @@ export { cleanupOfflineListeners } from "./utility/presence";
 // ===================================================================================
 
 // ZegoCloud utility function (common में बनाया गया)
+// This is called from the frontend to join calls.
 export { generateZegoToken as generateZegoTokenUtility } from "./common/zegocloud";
