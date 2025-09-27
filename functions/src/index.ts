@@ -11,18 +11,18 @@ if (admin.apps.length === 0) {
   admin.initializeApp();
 }
 
-
 // ===================================================================================
 // USER-SIDE FUNCTIONS (एंड-यूज़र के लिए)
 // ===================================================================================
 
 // Payment Functions (user/payment.ts से)
 export { createCashfreeOrder, cashfreeWebhook } from './user/payment';
+
 // webhook को 'api' नाम से भी export करें
 import { cashfreeWebhook } from './user/payment';
 export { cashfreeWebhook as api };
 
-// Call Request Functions (user/callRequest.ts से) - FIXED VERSION
+// Call Request Functions (user/callRequest.ts से)
 export { generateZegoToken } from './user/callRequest';
 
 // Chat Request Functions (user/chatRequest.ts से)
@@ -32,12 +32,10 @@ export { useFreeMessage } from './user/chatRequest';
 export { finalizeCallSession, finalizeChatSession } from './user/sessions';
 
 // History Functions (user/history.ts से)
-import { getRechargeHistory, getUsageHistory } from "./user/history";
-export { getRechargeHistory, getUsageHistory };
+export { getRechargeHistory, getUsageHistory } from "./user/history";
 
 // User Functions (user/users.ts से)
-import { updateMyProfile } from "./user/users";
-export { updateMyProfile };
+export { updateMyProfile } from "./user/users";
 
 // ===================================================================================
 // LISTENER-SIDE FUNCTIONS (आपके मौजूदा स्ट्रक्चर से)
@@ -53,11 +51,28 @@ export { onDeleteListener } from './listener/onDeleteListener';
 export { listener_setAdminRole } from './listener/setAdminRole';
 
 // ===================================================================================
+// ADMIN-SIDE FUNCTIONS
+// ===================================================================================
+
+export { makeAdmin } from "./admin/auth";
+export { getAdminDashboardStats } from "./admin/dashboard";
+export { updateListenerStatusByAdmin } from "./admin/manageListeners";
+export { toggleUserAccountStatus } from "./admin/manageUsers";
+
+// ===================================================================================
 // PRESENCE & UTILITY FUNCTIONS
 // ===================================================================================
 
-// All presence-related functions are imported and exported from the utility file.
-export * from "./utility/presence";
+// Import each presence function individually to ensure proper TypeScript compilation
+export { onListenerStatusChanged } from "./utility/presence";
+export { forceSyncListenerStatus } from "./utility/presence";
+export { testListenerStatusSync } from "./utility/presence";
+export { batchSyncAllListenerStatus } from "./utility/presence";
+export { cleanupOfflineListeners } from "./utility/presence";
+
+// ===================================================================================
+// COMMON UTILITY FUNCTIONS
+// ===================================================================================
 
 // ZegoCloud utility function (common में बनाया गया)
 export { generateZegoToken as generateZegoTokenUtility } from "./common/zegocloud";

@@ -1,5 +1,6 @@
 import * as functions from "firebase-functions/v1";
 import * as admin from "firebase-admin";
+import express from "express";
 
 // Ensure Firebase Admin is initialized. This is crucial for the function to work reliably.
 if (admin.apps.length === 0) {
@@ -11,7 +12,7 @@ if (admin.apps.length === 0) {
  * RTDB se Firestore me listener status sync karta hai
  */
 export const onListenerStatusChanged = functions
-  .region("asia-southeast1") // FIX: Changed region to match RTDB instance location
+  .region("asia-southeast1") // Correct region to match RTDB instance location
   .database.ref("/status/{uid}")
   .onWrite(async (change, context) => {
     const uid = context.params.uid;
@@ -105,7 +106,7 @@ export const forceSyncListenerStatus = functions
  */
 export const testListenerStatusSync = functions
   .region("asia-southeast1")
-  .https.onRequest(async (req, res) => {
+  .https.onRequest(async (req: express.Request, res: express.Response) => {
     res.set('Access-Control-Allow-Origin', '*');
     
     const { uid, isOnline } = req.query;
@@ -166,7 +167,7 @@ export const testListenerStatusSync = functions
  */
 export const batchSyncAllListenerStatus = functions
   .region("asia-southeast1")
-  .https.onRequest(async (req, res) => {
+  .https.onRequest(async (req: express.Request, res: express.Response) => {
     // Simple admin check
     const authToken = req.headers.authorization;
     if (!authToken || !authToken.includes('admin')) {
