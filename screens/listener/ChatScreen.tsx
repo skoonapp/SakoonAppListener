@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useListener } from '../../context/ListenerContext';
 import { db, storage, functions } from '../../utils/firebase';
-import type { ListenerChatSession, ChatMessage, CallRecord } from '../../types';
+import type { ListenerChatSession, ChatMessage } from '../../types';
 import MessageBubble from '../../components/chat/MessageBubble';
 import ChatInput from '../../components/chat/ChatInput';
 import firebase from 'firebase/compat/app';

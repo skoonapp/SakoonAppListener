@@ -54,7 +54,7 @@ const LoginScreen: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    let interval: number;
+    let interval: number | undefined;
     if (step === 'otp' && resendTimer > 0 && !canResend) {
       interval = window.setInterval(() => {
         setResendTimer((prev) => prev - 1);

@@ -19,7 +19,7 @@ const firebaseConfig = {
   measurementId: "G-6VD83ZC2HP"
 };
 
-const app = firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
 
 export const auth = firebase.auth();
 export const db = firebase.firestore();
@@ -33,7 +33,7 @@ export const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp;
 // Uncomment the following lines to use Firebase Emulators in development
 /*
 if (window.location.hostname === "localhost") {
-  auth.useEmulator("http://127.0.0.1:9099");
+  auth.useEmulator("http://1227.0.0.1:9099");
   db.useEmulator("127.0.0.1", 8080);
   rtdb.useEmulator("127.0.0.1", 9000);
   storage.useEmulator("127.0.0.1", 9199);

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import firebase from 'firebase/compat/app';
 import { db, functions, auth } from '../../utils/firebase';
 import type { ListenerProfile, Application, CallRecord } from '../../types';
 import { useNavigate, Link } from 'react-router-dom';
@@ -144,7 +143,7 @@ const AdminDashboardScreen: React.FC = () => {
         .where('appStatus', '==', 'Available')
         .where('isOnline', '==', true) // More accurate online status
         .onSnapshot(snapshot => {
-            setStats(prev => ({ ...prev, onlineListeners: snapshot.size }));
+            setStats((prev: any) => ({ ...prev, onlineListeners: snapshot.size }));
             setStatsLoading(false);
         }, (err: any) => {
           console.error("Error fetching online listeners:", err);
@@ -158,12 +157,12 @@ const AdminDashboardScreen: React.FC = () => {
         
     const unsubActive = db.collection('listeners').where('status', '==', 'active')
         .onSnapshot(snapshot => {
-            setStats(prev => ({ ...prev, activeListeners: snapshot.size }));
+            setStats((prev: any) => ({ ...prev, activeListeners: snapshot.size }));
         });
 
     const unsubActiveCalls = db.collection('calls').where('status', '==', 'active')
         .onSnapshot(snapshot => {
-            setStats(prev => ({ ...prev, activeCallsNow: snapshot.size }));
+            setStats((prev: any) => ({ ...prev, activeCallsNow: snapshot.size }));
         });
 
     const now = new Date();
@@ -177,7 +176,7 @@ const AdminDashboardScreen: React.FC = () => {
             const dailyTransactions = snapshot.docs
                 .filter(doc => doc.data().status === 'completed').length;
 
-            setStats(prev => ({
+            setStats((prev: any) => ({
                 ...prev,
                 dailyRevenue: dailyRevenue.toFixed(2),
                 dailyTransactions: dailyTransactions
