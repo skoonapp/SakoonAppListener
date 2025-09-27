@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ListenerProfile, ListenerAccountStatus } from '../../types';
+import type firebase from 'firebase/compat/app';
 
 interface ListenerRowProps {
   listener: ListenerProfile;
@@ -31,6 +32,23 @@ const StatusBadge: React.FC<{ status: ListenerAccountStatus }> = ({ status }) =>
     return <span className={`${baseClasses} ${colorClasses}`}>{status.replace('_', ' ')}</span>;
 };
 
+const formatLastSeen = (timestamp: firebase.firestore.Timestamp | undefined): string => {
+    if (!timestamp) return 'never';
+    const now = new Date();
+    const lastSeenDate = timestamp.toDate();
+    const diffSeconds = Math.floor((now.getTime() - lastSeenDate.getTime()) / 1000);
+
+    if (diffSeconds < 60) return 'just now';
+    const diffMinutes = Math.floor(diffSeconds / 60);
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `${diffHours}h ago`;
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffDays <= 7) return `${diffDays}d ago`;
+    
+    return lastSeenDate.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+};
+
 
 const ListenerRow: React.FC<ListenerRowProps> = ({ listener, onStatusChange, isUpdating }) => {
     return (
@@ -40,7 +58,19 @@ const ListenerRow: React.FC<ListenerRowProps> = ({ listener, onStatusChange, isU
                     <img src={listener.avatarUrl || `https://ui-avatars.com/api/?name=${listener.displayName}&background=random`} alt={listener.displayName} className="w-10 h-10 rounded-full object-cover"/>
                     <div>
                         {listener.displayName}
-                        <div className="font-normal text-slate-500 text-xs">{listener.uid}</div>
+                        <div className="font-normal text-slate-500 text-xs">
+                             {listener.isOnline ? (
+                                <div className="flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                                    <span className="relative flex h-2 w-2">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                    </span>
+                                    <span>Online</span>
+                                </div>
+                            ) : (
+                                <span>Last active: {formatLastSeen(listener.lastSeen)}</span>
+                            )}
+                        </div>
                     </div>
                 </div>
             </th>
