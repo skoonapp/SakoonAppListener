@@ -150,11 +150,11 @@ const StatusToggle: React.FC = () => {
     
     const getSubtitle = () => {
         switch (optimisticStatus) {
-            case 'Available': return 'You are available for notifications.';
+            case 'Available': return 'अब काल या मैसेज आयेगा।';
             case 'Busy': return 'You are currently busy in a call.';
             case 'Break': return 'You are on a break.';
             case 'Offline':
-            default: return 'You are offline and won\'t get notifications.';
+            default: return 'काल या मैसेज नहीं आयेगा।';
         }
     };
     
