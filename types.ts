@@ -17,7 +17,8 @@ export interface ListenerProfile {
   createdAt: firebase.firestore.Timestamp;
   onboardingComplete: boolean;
   isAdmin: boolean;
-  isOnline?: boolean; // Represents live connection status, now controlled by client.
+  isOnline?: boolean; // Live connection status from RTDB presence
+  lastSeen?: firebase.firestore.Timestamp; // For admins to see last active time
   profession: string;
   languages: string[];
   avatarUrl: string;

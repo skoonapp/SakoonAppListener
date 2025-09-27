@@ -51,7 +51,7 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
     return () => unsubscribe();
   }, [user]);
 
-  // Effect 2a: Manage RTDB connection status (isOnline flag)
+  // Effect 2a: Manage RTDB connection status (isOnline flag) with a robust presence system.
   useEffect(() => {
     if (!user) return;
 
@@ -59,26 +59,67 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
     const statusRef = rtdb.ref(`/status/${uid}`);
     const connectedRef = rtdb.ref('.info/connected');
 
-    const listener = connectedRef.on('value', (snap) => {
+    let heartbeatInterval: number | undefined;
+
+    const connectedListener = connectedRef.on('value', (snap) => {
       if (snap.val() === true) {
         // We're connected.
-        // Set onDisconnect to mark us offline when we disconnect.
-        statusRef.onDisconnect().update({ isOnline: false, lastActive: firebase.database.ServerValue.TIMESTAMP })
-          .catch(err => console.error("RTDB onDisconnect for isOnline failed:", err));
+        const connectionData = {
+          isOnline: true,
+          lastActive: firebase.database.ServerValue.TIMESTAMP,
+          appState: 'foreground',
+          deviceOnline: true,
+        };
 
-        // Set the isOnline status to true.
-        statusRef.update({ isOnline: true })
-          .catch(err => console.error("RTDB update for isOnline failed:", err));
+        // Set onDisconnect to mark us offline when we disconnect. This is critical.
+        statusRef.onDisconnect().set({
+            isOnline: false,
+            lastActive: firebase.database.ServerValue.TIMESTAMP,
+            appState: 'closed'
+        }).catch(err => console.error("RTDB onDisconnect setup failed:", err));
+
+        // Set the initial online status.
+        statusRef.update(connectionData).catch(err => console.error("RTDB initial online status update failed:", err));
+
+        // Start a regular heartbeat to keep the 'lastActive' timestamp fresh.
+        heartbeatInterval = window.setInterval(() => {
+            statusRef.update({ heartbeat: firebase.database.ServerValue.TIMESTAMP });
+        }, 30000); // Every 30 seconds
+
       }
-      // If snap.val() is false, the onDisconnect handler takes care of it when the connection is truly lost.
     });
+    
+    // Listen for app visibility changes (tab in focus or background)
+    const handleVisibilityChange = () => {
+        if (document.hidden) {
+            statusRef.update({ appState: 'background' });
+        } else {
+            statusRef.update({ appState: 'foreground', isOnline: true, lastActive: firebase.database.ServerValue.TIMESTAMP });
+        }
+    };
+    
+    // Listen for browser's network connection status
+    const handleOnline = () => statusRef.update({ deviceOnline: true, isOnline: true });
+    const handleOffline = () => statusRef.update({ deviceOnline: false });
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     return () => {
-      connectedRef.off('value', listener);
+      // Cleanup all listeners and intervals
+      connectedRef.off('value', connectedListener);
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      // When the component unmounts (e.g., during a clean logout),
+      // explicitly set the status to offline.
+      statusRef.update({ isOnline: false, appState: 'background' });
     };
   }, [user]);
 
-  // Effect 2b: Sync profile data (appStatus) to RTDB
+  // Effect 2b: Sync profile data (appStatus) from Firestore state to RTDB
   useEffect(() => {
     if (!user || !profile) return;
     
@@ -88,9 +129,7 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
     // When the profile's appStatus changes, update it in RTDB.
     statusRef.update({ 
       appStatus: profile.appStatus,
-      lastActive: firebase.database.ServerValue.TIMESTAMP 
-    })
-      .catch(err => console.error("RTDB sync for appStatus failed:", err));
+    }).catch(err => console.error("RTDB sync for appStatus failed:", err));
 
   }, [user, profile]);
 

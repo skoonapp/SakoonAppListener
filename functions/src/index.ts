@@ -6,7 +6,6 @@
  */
 import { setGlobalOptions } from 'firebase-functions/v2';
 import * as admin from "firebase-admin";
-import * as functions from "firebase-functions/v1";
 
 setGlobalOptions({ region: 'asia-south1' });
 
@@ -60,36 +59,8 @@ export { listener_setAdminRole } from './listener/setAdminRole';
 // PRESENCE & UTILITY FUNCTIONS
 // ===================================================================================
 
-/**
- * Syncs the listener's online status from Realtime Database to Firestore.
- * This makes the `isOnline` field fully automatic and reliable.
- */
-export const onListenerStatusChanged = functions
-  .region("asia-south1")
-  .database.ref("/status/{uid}")
-  .onWrite(async (change, context) => {
-    const uid = context.params.uid;
-    const status = change.after.val();
-    
-    // `isOnline` will be true, false, or null if the node is deleted.
-    const isOnline = status?.isOnline ?? false;
-
-    const listenerRef = admin.firestore().collection("listeners").doc(uid);
-
-    try {
-      // Check if the document exists before updating to avoid errors.
-      const doc = await listenerRef.get();
-      if (doc.exists) {
-        await listenerRef.update({ isOnline: isOnline });
-        functions.logger.log(`Synced Firestore presence for listener ${uid} to: ${isOnline}`);
-      } else {
-        functions.logger.warn(`Listener document for UID ${uid} not found. Could not sync presence.`);
-      }
-    } catch (error) {
-      functions.logger.error(`Failed to sync Firestore presence for ${uid}.`, error);
-    }
-  });
-
+// All presence-related functions are imported and exported from the utility file.
+export * from "./utility/presence";
 
 // ZegoCloud utility function (common में बनाया गया)
 export { generateZegoToken as generateZegoTokenUtility } from "./common/zegocloud";

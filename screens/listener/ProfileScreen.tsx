@@ -153,7 +153,8 @@ const ProfileScreen: React.FC = () => {
             const rtdbUpdate = statusRef.set({
                 isOnline: false,
                 lastActive: firebase.database.ServerValue.TIMESTAMP,
-                appStatus: 'Offline'
+                appStatus: 'Offline',
+                manualLogout: true
             });
     
             await Promise.all([firestoreUpdate, rtdbUpdate]);
