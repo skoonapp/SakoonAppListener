@@ -51,54 +51,48 @@ export const ListenerProvider: React.FC<ListenerProviderProps> = ({ user, childr
     return () => unsubscribe();
   }, [user]);
 
-  // Effect 2: Manage Realtime Database presence with separated logic.
+  // Effect 2: Manage Realtime Database presence and status sync.
   useEffect(() => {
+    // We need a user to do anything and the profile to know the listener's desired appStatus.
+    // If it's not loaded yet, this effect will re-run when it is.
     if (!user || !profile) {
-      return;
+        return;
     }
 
     const uid = user.uid;
     const statusRef = rtdb.ref(`/status/${uid}`);
     const connectedRef = rtdb.ref('.info/connected');
 
-    // --- Part A: Direct Status Sync ---
-    // This runs every time the profile changes, ensuring RTDB is always in sync with Firestore `appStatus`.
-    // This is the definitive fix for the 'isOnline' bug.
-    const isListenerAvailable = profile.appStatus === 'Available';
-    const currentStatusPayload = {
-        isOnline: isListenerAvailable,
-        lastActive: firebase.database.ServerValue.TIMESTAMP,
-        appStatus: profile.appStatus,
-    };
-
-    statusRef.set(currentStatusPayload)
-        .catch(err => console.error("Direct RTDB sync failed:", err));
-
-    // --- Part B: Connection State Management ---
-    // This sets up the "last will" for abrupt disconnects and handles re-connection.
     const listener = connectedRef.on('value', (snap) => {
         if (snap.val() === false) {
             // We are disconnected. The onDisconnect() handler set below will take care of updating the status.
             return;
         }
 
-        // We are connected (or have just re-connected).
+        // --- We are connected (or have just re-connected) ---
+        
         // 1. Set the onDisconnect "last will". This must be set every time we connect.
+        // This payload will be written to RTDB if the client disconnects ungracefully.
         const onDisconnectPayload = {
-            isOnline: false, // Disconnected always means not online.
+            isOnline: false, // When connection is lost, they are not online.
             lastActive: firebase.database.ServerValue.TIMESTAMP,
             appStatus: profile.appStatus, // Preserve the listener's manually set status.
         };
         statusRef.onDisconnect().set(onDisconnectPayload)
             .catch(err => console.error("RTDB onDisconnect setup failed:", err));
 
-        // 2. When we connect or re-connect, re-apply the current status. This is important
-        // because the onDisconnect handler might have just fired if it was a brief disconnect.
+        // 2. Set the current status now that we are connected.
+        // This overwrites any stale data (e.g., if onDisconnect just fired).
+        const currentStatusPayload = {
+            isOnline: true, // We are connected, so isOnline is true.
+            lastActive: firebase.database.ServerValue.TIMESTAMP,
+            appStatus: profile.appStatus, // Sync the current appStatus from the profile.
+        };
         statusRef.set(currentStatusPayload)
             .catch(err => console.error("RTDB re-connect sync failed:", err));
     });
 
-    // Cleanup function
+    // Cleanup function for when the component unmounts (e.g., logout).
     return () => {
         // Remove the connection listener to prevent memory leaks.
         connectedRef.off('value', listener);
