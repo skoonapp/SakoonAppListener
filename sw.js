@@ -21,6 +21,7 @@ clientsClaim();
 // --- Firebase Push Notifications Logic ---
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js');
 
 const firebaseConfig = {
     apiKey: "AIzaSyDgrba11-ZmbE6f3BIYfNc_tKLv32osWuU",

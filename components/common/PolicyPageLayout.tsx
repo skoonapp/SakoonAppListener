@@ -1,5 +1,4 @@
 import React from 'react';
-// FIX: The import for `Link` is correct for react-router-dom v5. The error was a cascading issue from other files using v6 syntax.
 import { Link } from 'react-router-dom';
 
 const PolicyPageLayout: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (

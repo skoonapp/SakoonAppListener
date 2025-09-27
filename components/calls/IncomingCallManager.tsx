@@ -1,6 +1,4 @@
-
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 // FIX: Corrected react-router import. In v6, hooks should be imported from 'react-router-dom'.
 import { useNavigate, useLocation } from 'react-router-dom';
 import { messaging, db } from '../../utils/firebase';
@@ -100,6 +98,7 @@ const IncomingCallManager: React.FC = () => {
   const { profile } = useListener();
   const navigate = useNavigate();
   const location = useLocation();
+  const [incomingCall, setIncomingCall] = useState<{ userName: string, callId: string } | null>(null);
 
   useEffect(() => {
     if (!messaging || !profile) {
@@ -139,25 +138,24 @@ const IncomingCallManager: React.FC = () => {
     // Handle foreground messages
     const unsubscribe = messaging.onMessage((payload) => {
       console.log('Message received in foreground. ', payload);
-      const { type, userName, callId } = payload.data || {};
+      const { type, userName, callId, silent } = payload.data || {};
+      const isSilent = silent === 'true';
 
       if (type === 'incoming_call') {
-        // Default to true if setting is undefined
-        if (profile.notificationSettings?.calls !== false) {
+        // Default to true if setting is undefined, and not a silent notification
+        if (profile.notificationSettings?.calls !== false && !isSilent) {
           playRingtone();
         }
-
-        const isConfirmed = window.confirm(
-          `${userName || 'A user'} is calling. Do you want to accept?`
-        );
-        stopRingtone(); // Stop ringtone after user interacts with prompt
-
-        if (isConfirmed && callId) {
-          navigate(`/call/${callId}`);
-        } else {
-          // TODO: Implement call rejection logic
-          console.log('Call rejected by listener from foreground prompt.');
+        
+        // If another call is already ringing, reject the new one automatically to avoid UI confusion.
+        if (incomingCall) {
+            console.warn(`New call received while another is ringing. Auto-rejecting call ${callId}.`);
+            db.collection('calls').doc(callId).update({ status: 'rejected' });
+            return;
         }
+
+        setIncomingCall({ userName, callId });
+        
       } else if (type === 'new_message') {
           const isOnChatScreen = location.pathname.includes('/chat');
           // Default to true if setting is undefined
@@ -171,9 +169,70 @@ const IncomingCallManager: React.FC = () => {
       unsubscribe();
       stopRingtone(); // Ensure ringtone stops if component unmounts while ringing
     };
-  }, [profile, navigate, location]);
+  }, [profile, navigate, location, incomingCall]);
 
-  return null; // This component does not render anything itself.
+
+  const handleAccept = () => {
+    if (!incomingCall) return;
+    stopRingtone();
+    navigate(`/call/${incomingCall.callId}`);
+    setIncomingCall(null);
+  };
+
+  const handleReject = async (callIdToReject?: string) => {
+    const callId = callIdToReject || incomingCall?.callId;
+    if (!callId) return;
+
+    stopRingtone();
+    try {
+      const callRef = db.collection('calls').doc(callId);
+      const doc = await callRef.get();
+      // To avoid race conditions, only reject if the call is still 'ringing' or 'pending'.
+      if (doc.exists && ['pending', 'ringing'].includes(doc.data()?.status)) {
+        await callRef.update({ status: 'rejected' });
+        console.log(`Call ${callId} rejected by listener.`);
+      } else {
+        console.log(`Call ${callId} was already handled or its status is not pending/ringing.`);
+      }
+    } catch (err) {
+      console.error("Failed to reject call:", err);
+    }
+    // Only clear the UI if the rejected call is the one currently displayed.
+    if (incomingCall && callId === incomingCall.callId) {
+        setIncomingCall(null);
+    }
+  };
+  
+  // Auto-reject call after a timeout if no action is taken.
+  useEffect(() => {
+    if (incomingCall) {
+      const timer = setTimeout(() => {
+        console.log(`Incoming call ${incomingCall.callId} timed out and was missed.`);
+        // Pass callId directly to handleReject to avoid closure issues
+        handleReject(incomingCall.callId);
+      }, 30000); // 30-second timeout
+
+      return () => clearTimeout(timer);
+    }
+  }, [incomingCall]);
+
+
+  if (!incomingCall) {
+    return null;
+  }
+
+  return (
+    <div className="fixed bottom-4 left-4 right-4 md:left-auto md:max-w-md z-[100] bg-gradient-to-r from-slate-800 to-slate-900 text-white p-4 rounded-xl shadow-2xl flex items-center justify-between gap-4 animate-fade-in border border-slate-700">
+        <div>
+            <p className="font-bold text-lg">Incoming Call</p>
+            <p className="text-slate-300">{incomingCall.userName || 'A user'} is calling...</p>
+        </div>
+        <div className="flex gap-3">
+            <button onClick={() => handleReject()} className="bg-red-500 hover:bg-red-600 active:bg-red-700 font-bold py-3 px-5 rounded-lg transition-transform hover:scale-105">Reject</button>
+            <button onClick={handleAccept} className="bg-green-500 hover:bg-green-600 active:bg-green-700 font-bold py-3 px-5 rounded-lg transition-transform hover:scale-105">Accept</button>
+        </div>
+    </div>
+  );
 };
 
 export default IncomingCallManager;
