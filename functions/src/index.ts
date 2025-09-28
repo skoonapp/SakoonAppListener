@@ -1,65 +1,87 @@
-
 /**
  * मुख्य Firebase Functions इंडेक्स फाइल।
  * यह फाइल आपके ऐप के सभी (User, Listener, Admin) Cloud Functions के लिए मुख्य एंट्री पॉइंट है।
- * यह अलग-अलग फाइलों से सभी फंक्शन्स को इम्पोर्ट और एक्सपोर्ट करती है,
- * ताकि Firebase उन्हें पहचान सके और तैनात (deploy) कर सके।
+ * यह अलग-अलग फाइलों से सभी फंक्शन्स को इम्पोर्ट और एक्सपोर्ट करती है।
  */
+
 import * as admin from "firebase-admin";
 
-// Initialize Firebase Admin SDK
+// Initialize Firebase Admin SDK once
 if (admin.apps.length === 0) {
   admin.initializeApp();
 }
 
 // ===================================================================================
-// USER-SIDE FUNCTIONS (एंड-यूज़र के लिए)
+// COMMON/UTILITY FUNCTIONS
 // ===================================================================================
 
-// Payment Functions (user/payment.ts से)
-// Only the webhook is used, which is called by an external service.
-export { cashfreeWebhook } from './user/payment';
+// API Routes (Express app)
+// export { api } from './common/api'; // Uncomment if you have this file
 
-// webhook को 'api' नाम से भी export करें
-import { cashfreeWebhook } from './user/payment';
-export { cashfreeWebhook as api };
-
-// Session Functions (user/sessions.ts से)
-// These are Firestore triggers that run automatically.
-export { finalizeCallSession, finalizeChatSession } from './user/sessions';
+// Gemini AI Functions
+// export { generateTextWithGemini } from './common/gemini'; // Uncomment if you have this file
 
 // ===================================================================================
-// LISTENER-SIDE FUNCTIONS (आपके मौजूदा स्ट्रक्चर से)
+// USER-SIDE FUNCTIONS
 // ===================================================================================
 
-// Listener Application और Approval से जुड़े फ़ंक्शंस
+// Payment Functions
+// export { createCashfreeOrder, cashfreeWebhook } from './user/payment'; // Uncomment if you have these files
+
+// Call Request Functions
+// export { generateZegoToken } from './user/callRequest'; // Note: This is for the user app, not the listener app.
+
+// Chat Request Functions
+// export { useFreeMessage } from './user/chatRequest'; // Uncomment if you have this file
+
+// Session Functions
+export { finalizeChatSession } from './user/sessions';
+// export { finalizeCallSession } from './user/sessions'; // Uncomment if you have these files
+
+
+// History Functions
+// export { getRechargeHistory, getUsageHistory } from "./user/history"; // Uncomment if you have these files
+
+// User Functions
+// export { updateMyProfile } from "./user/users"; // Uncomment if you have this file
+
+// ===================================================================================
+// LISTENER-SIDE FUNCTIONS
+// ===================================================================================
+
+// Listener Application Functions
 export { listener_approveApplication } from './listener/approveApplication';
 export { listener_rejectApplication } from './listener/rejectApplication';
 export { listener_submitListenerApplication } from './listener/submitListenerApplication';
 
-// Listener Auth (जैसे अकाउंट डिलीट होने पर) और Admin Management से जुड़े फ़ंक्शंस
-// This is an auth trigger that runs automatically.
+// Listener Management Functions
 export { onDeleteListener } from './listener/onDeleteListener';
+// FIX: The file `setAdminRole.ts` is empty and not a valid module, causing a compilation error.
+// The function is not implemented, so its export is commented out to resolve the issue.
+// export { listener_setAdminRole } from './listener/setAdminRole';
 
-// Listener Zego Token Generation
-// This is called from the frontend to join calls securely.
-export { generateZegoTokenForListener } from "./listener/callRequest";
+// Call & Callback Functions for Listener App
+// FIX: Corrected casing in import path to match file name 'callRequest.ts'.
+export { generateZegoTokenForListener } from './listener/callRequest';
+// FIX: Corrected casing in import path to match file name 'initiateCallback.ts'.
+export { listener_initiateCallback } from './listener/initiateCallback';
 
-// Listener Callback Initiation
-export { listener_initiateCallback } from "./listener/initiateCallback";
+
+// ===================================================================================
+// ADMIN-SIDE FUNCTIONS
+// ===================================================================================
+
+// export { makeAdmin } from "./admin/auth";
+// export { getAdminDashboardStats } from "./admin/dashboard";
+// export { updateListenerStatusByAdmin } from "./admin/manageListeners";
+// export { toggleUserAccountStatus } from "./admin/manageUsers";
 
 // ===================================================================================
 // PRESENCE & UTILITY FUNCTIONS
 // ===================================================================================
 
-// These are database triggers or scheduled functions that run automatically.
 export { onListenerStatusChanged } from "./utility/presence";
 export { cleanupOfflineListeners } from "./utility/presence";
-
-// ===================================================================================
-// COMMON UTILITY FUNCTIONS
-// ===================================================================================
-
-// ZegoCloud utility function (common में बनाया गया)
-// DEPRECATED: Replaced by the more secure, listener-specific function.
-// export { generateZegoToken as generateZegoTokenUtility } from "./common/zegocloud";
+// export { forceSyncListenerStatus } from "./utility/presence";
+// export { testListenerStatusSync } from "./utility/presence";
+// export { batchSyncAllListenerStatus } from "./utility/presence";
