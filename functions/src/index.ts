@@ -12,75 +12,58 @@ if (admin.apps.length === 0) {
 }
 
 // ===================================================================================
-// COMMON/UTILITY FUNCTIONS
+// USER-SIDE FUNCTIONS (Files not provided, commented out for safety)
 // ===================================================================================
-
-// API Routes (Express app)
-// export { api } from './common/api'; // Uncomment if you have this file
-
-// Gemini AI Functions
-// export { generateTextWithGemini } from './common/gemini'; // Uncomment if you have this file
-
-// ===================================================================================
-// USER-SIDE FUNCTIONS
-// ===================================================================================
-
-// Payment Functions
-// export { createCashfreeOrder, cashfreeWebhook } from './user/payment'; // Uncomment if you have these files
-
-// Call Request Functions
-// export { generateZegoToken } from './user/callRequest'; // Note: This is for the user app, not the listener app.
-
-// Chat Request Functions
-// export { useFreeMessage } from './user/chatRequest'; // Uncomment if you have this file
-
-// Session Functions
-export { finalizeChatSession } from './user/sessions';
-// export { finalizeCallSession } from './user/sessions'; // Uncomment if you have these files
-
-
-// History Functions
-// export { getRechargeHistory, getUsageHistory } from "./user/history"; // Uncomment if you have these files
-
-// User Functions
-// export { updateMyProfile } from "./user/users"; // Uncomment if you have this file
+// export { createCashfreeOrder, cashfreeWebhook } from './user/payment';
+// export { generateZegoToken } from './user/callRequest';
+// export { useFreeMessage } from './user/chatRequest';
+// export { finalizeCallSession, finalizeChatSession } from './user/sessions';
+// export { getRechargeHistory, getUsageHistory } from "./user/history";
+// export { updateMyProfile } from "./user/users";
 
 // ===================================================================================
 // LISTENER-SIDE FUNCTIONS
 // ===================================================================================
 
-// Listener Application Functions
+// Listener Application & Approval
 export { listener_approveApplication } from './listener/approveApplication';
 export { listener_rejectApplication } from './listener/rejectApplication';
 export { listener_submitListenerApplication } from './listener/submitListenerApplication';
 
-// Listener Management Functions
+// Listener Account Management & Auth
 export { onDeleteListener } from './listener/onDeleteListener';
-// FIX: The file `setAdminRole.ts` is empty and not a valid module, causing a compilation error.
-// The function is not implemented, so its export is commented out to resolve the issue.
-// export { listener_setAdminRole } from './listener/setAdminRole';
+export { listener_setAdminRole } from './listener/setAdminRole';
 
-// Call & Callback Functions for Listener App
-// FINAL FIX: Using simple, unique filenames to avoid any caching or pathing issues.
+// Listener Calling & Zego Token
 export { generateZegoTokenForListener } from './listener/token';
 export { listener_initiateCallback } from './listener/callback';
+
+// Listener Dashboard & Stats
+export { getDashboardData } from './listener/dashboard';
+
+// Listener Earnings
+export { onCallComplete } from './listener/addEarning';
+export { getEarningsSummary } from './listener/earnings';
+
+// Listener Notifications
+export { sendCallNotificationToListener, sendChatNotificationToListener } from './listener/notifications';
 
 
 // ===================================================================================
 // ADMIN-SIDE FUNCTIONS
 // ===================================================================================
 
-// export { makeAdmin } from "./admin/auth";
-// export { getAdminDashboardStats } from "./admin/dashboard";
-// export { updateListenerStatusByAdmin } from "./admin/manageListeners";
-// export { toggleUserAccountStatus } from "./admin/manageUsers";
+export { makeAdmin } from "./admin/auth";
+// export { getAdminDashboardStats } from "./admin/dashboard"; // This file is empty
+export { updateListenerStatusByAdmin } from "./admin/manageListeners";
+export { toggleUserAccountStatus } from "./admin/manageUsers";
 
 // ===================================================================================
 // PRESENCE & UTILITY FUNCTIONS
 // ===================================================================================
 
-export { onListenerStatusChanged } from "./utility/presence";
-export { cleanupOfflineListeners } from "./utility/presence";
+export { onListenerStatusChanged, cleanupOfflineListeners } from "./utility/presence";
+// NOTE: Other presence functions were not provided.
 // export { forceSyncListenerStatus } from "./utility/presence";
 // export { testListenerStatusSync } from "./utility/presence";
 // export { batchSyncAllListenerStatus } from "./utility/presence";

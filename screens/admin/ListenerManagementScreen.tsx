@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { db } from '../../utils/firebase';
+import { db, functions } from '../../utils/firebase';
 import type { ListenerProfile, ListenerAccountStatus } from '../../types';
 import ListenerRow from '../../components/admin/ListenerRow';
 import type firebase from 'firebase/compat/app';
@@ -115,13 +115,15 @@ const ListenerManagementScreen: React.FC = () => {
 
         setUpdatingUids(prev => [...prev, listener.uid]);
         try {
-            await db.collection('listeners').doc(listener.uid).update({ status: newStatus });
+            const updateStatus = functions.httpsCallable('updateListenerStatusByAdmin');
+            await updateStatus({ listenerUid: listener.uid, newStatus: newStatus });
+            
             // Update local state for immediate feedback
             setListeners(prev => prev.map(l => l.uid === listener.uid ? { ...l, status: newStatus } : l));
             setNotification({ message: `Status updated for ${listener.displayName}.`, type: 'success'});
-        } catch (error) {
+        } catch (error: any) {
             console.error("Failed to update status:", error);
-            setNotification({ message: `Error updating status for ${listener.displayName}.`, type: 'error'});
+            setNotification({ message: `Error updating status for ${listener.displayName}: ${error.message}`, type: 'error'});
         } finally {
             setUpdatingUids(prev => prev.filter(uid => uid !== listener.uid));
         }
