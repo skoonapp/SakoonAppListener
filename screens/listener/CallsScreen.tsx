@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { db } from '../../utils/firebase';
+import { db, functions } from '../../utils/firebase';
 import { useListener } from '../../context/ListenerContext';
 import type { CallRecord } from '../../types';
 import CallHistoryCard from '../../components/calls/CallHistoryCard';
@@ -98,24 +99,27 @@ const CallsScreen: React.FC = () => {
         showNotification('Initiating callback...', 'info');
 
         try {
-            const newCallRef = await db.collection('calls').add({
-                listenerId: profile.uid,
+            // Call the new secure backend function
+            const initiateCallback = functions.httpsCallable('listener_initiateCallback');
+            const result = await initiateCallback({
                 userId: originalCall.userId,
                 userName: originalCall.userName,
                 userAvatar: originalCall.userAvatar || null,
-                startTime: firebase.firestore.FieldValue.serverTimestamp(),
-                status: 'ringing',
-                earnings: 0,
-                type: 'call',
-                isCallback: true,
-                maxDurationSeconds: 120,
             });
 
-            navigate(`/call/${newCallRef.id}`);
+            const callId = (result.data as { callId: string }).callId;
 
-        } catch (error) {
+            if (callId) {
+                navigate(`/call/${callId}`);
+            } else {
+                throw new Error("Backend function did not return a callId.");
+            }
+
+        } catch (error: any) {
             console.error("Failed to create callback call:", error);
-            showNotification('Could not start callback. Please try again.', 'error');
+            // Display the user-friendly error message from the backend function
+            const message = error.message || 'Could not start callback. Please try again.';
+            showNotification(message, 'error');
         } finally {
             setIsCreatingCallback(false);
         }
@@ -124,8 +128,8 @@ const CallsScreen: React.FC = () => {
     const filteredCalls = useMemo(() => {
         let calls = allCalls;
 
-        // Date filter is applied first
-        if (dateFilter !== 'all') {
+        // Date filter is applied first for non-callback tabs
+        if (dateFilter !== 'all' && statusFilter !== 'callback') {
             const now = new Date();
             let startDate = new Date();
 
@@ -150,20 +154,26 @@ const CallsScreen: React.FC = () => {
                 const callbackOpportunities = new Map<string, CallRecord>();
                 const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
-                // No date filter for callbacks, it's always last 24h
+                const usedCallbackUserIds = new Set(
+                    allCalls
+                        .filter(call => call.isCallback && call.startTime && call.startTime.toDate() > twentyFourHoursAgo)
+                        .map(call => call.userId)
+                );
+                
                 allCalls
                     .filter(call =>
                         call.status === 'completed' &&
                         call.durationSeconds && call.durationSeconds >= 300 && // 5 minutes
-                        call.endTime && call.endTime.toDate() > twentyFourHoursAgo
+                        call.endTime && call.endTime.toDate() > twentyFourHoursAgo &&
+                        !usedCallbackUserIds.has(call.userId)
                     )
                     .forEach(call => {
-                        if (!callbackOpportunities.has(call.userId) || (call.endTime && callbackOpportunities.get(call.userId)!.endTime && call.endTime.toMillis() > callbackOpportunities.get(call.userId)!.endTime!.toMillis())) {
+                        if (!callbackOpportunities.has(call.userId) || (call.endTime && callbackOpportunities.get(call.userId)!.endTime!.toMillis() < call.endTime.toMillis())) {
                             callbackOpportunities.set(call.userId, call);
                         }
                     });
 
-                return Array.from(callbackOpportunities.values());
+                return Array.from(callbackOpportunities.values()).sort((a,b) => b.endTime!.toMillis() - a.endTime!.toMillis());
             }
             case 'all':
             default:
@@ -182,7 +192,12 @@ const CallsScreen: React.FC = () => {
         <div className="p-4 space-y-4">
             <header className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-slate-500 dark:text-slate-400">Review your recent calls.</p>
+                    <p className="text-slate-500 dark:text-slate-400">
+                        {statusFilter === 'callback' 
+                          ? 'Tap to start a free 2-min call with eligible users.'
+                          : 'Review your recent calls.'
+                        }
+                    </p>
                     {statusFilter !== 'callback' && ( // Hide date filter on callback tab
                         <FilterButton 
                             value={dateFilter}
@@ -219,7 +234,7 @@ const CallsScreen: React.FC = () => {
                                 key={call.callId} 
                                 onClick={() => handleStartCallback(call)}
                                 disabled={isCreatingCallback}
-                                className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-xl"
+                                className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500 rounded-xl transition-transform hover:-translate-y-0.5"
                             >
                                 <CallHistoryCard call={call} />
                             </button>

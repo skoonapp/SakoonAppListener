@@ -1,3 +1,4 @@
+
 import { auth, functions } from './firebase';
 // import { httpsCallable } from 'firebase/functions'; // FIX: Remove modular import
 
@@ -22,7 +23,7 @@ export const fetchZegoToken = async (roomId: string): Promise<string> => {
         }
 
         // FIX: Use the compat syntax for calling the function
-        const generateToken = functions.httpsCallable('generateZegoTokenUtility');
+        const generateToken = functions.httpsCallable('generateZegoTokenForListener');
         const result = await generateToken({ roomId });
 
         // The httpsCallable result has the data inside a `data` property.

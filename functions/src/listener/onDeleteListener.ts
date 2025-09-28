@@ -1,5 +1,4 @@
 
-
 import * as functionsV1 from "firebase-functions/v1";
 import * as admin from "firebase-admin";
 

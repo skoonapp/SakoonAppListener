@@ -1,3 +1,4 @@
+
 /**
  * Payment processing functions using Cashfree.
  * - cashfreeWebhook: Handles status updates from Cashfree after a payment.
@@ -15,7 +16,8 @@ const db = admin.firestore();
 /**
  * Webhook to handle payment status updates from Cashfree.
  */
-export const cashfreeWebhook = functions.region("asia-south1").https.onRequest(async (req, res) => {
+// FIX: Explicitly type req and res to resolve TypeScript errors with req.body and res.status.
+export const cashfreeWebhook = functions.region("asia-south1").https.onRequest(async (req: functions.https.Request, res: functions.Response) => {
   try {
     const webhookData = req.body;
     functions.logger.info("Received Cashfree Webhook:", webhookData);

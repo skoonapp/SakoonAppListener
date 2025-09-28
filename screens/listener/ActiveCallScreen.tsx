@@ -98,8 +98,8 @@ const ActiveCallScreen: React.FC = () => {
                     zegoInstanceRef.current = zp; // Store the instance for later control
                     
                     // If it's a callback, start the countdown timer
-                    if (data.isCallback) {
-                        setCountdown(data.maxDurationSeconds || 120);
+                    if (data.isCallback && data.maxDurationSeconds) {
+                        setCountdown(data.maxDurationSeconds);
                     }
 
                     zp.joinRoom({

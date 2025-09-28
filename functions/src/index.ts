@@ -1,3 +1,4 @@
+
 /**
  * मुख्य Firebase Functions इंडेक्स फाइल।
  * यह फाइल आपके ऐप के सभी (User, Listener, Admin) Cloud Functions के लिए मुख्य एंट्री पॉइंट है।
@@ -40,6 +41,13 @@ export { listener_submitListenerApplication } from './listener/submitListenerApp
 // This is an auth trigger that runs automatically.
 export { onDeleteListener } from './listener/onDeleteListener';
 
+// Listener Zego Token Generation
+// This is called from the frontend to join calls securely.
+export { generateZegoTokenForListener } from "./listener/callRequest";
+
+// Listener Callback Initiation
+export { listener_initiateCallback } from "./listener/initiateCallback";
+
 // ===================================================================================
 // PRESENCE & UTILITY FUNCTIONS
 // ===================================================================================
@@ -53,5 +61,5 @@ export { cleanupOfflineListeners } from "./utility/presence";
 // ===================================================================================
 
 // ZegoCloud utility function (common में बनाया गया)
-// This is called from the frontend to join calls.
-export { generateZegoToken as generateZegoTokenUtility } from "./common/zegocloud";
+// DEPRECATED: Replaced by the more secure, listener-specific function.
+// export { generateZegoToken as generateZegoTokenUtility } from "./common/zegocloud";
