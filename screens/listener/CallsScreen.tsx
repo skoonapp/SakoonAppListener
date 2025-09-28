@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { db, functions } from '../../utils/firebase';
 import { useListener } from '../../context/ListenerContext';
@@ -6,7 +7,6 @@ import type { CallRecord } from '../../types';
 import CallHistoryCard from '../../components/calls/CallHistoryCard';
 import { usePTR } from '../../context/PTRContext';
 import { useNavigate } from 'react-router-dom';
-import firebase from 'firebase/compat/app';
 import { useNotification } from '../../context/NotificationContext';
 
 type StatusFilter = 'all' | 'completed' | 'missed_and_rejected' | 'callback';
