@@ -61,10 +61,9 @@ export { onDeleteListener } from './listener/onDeleteListener';
 // export { listener_setAdminRole } from './listener/setAdminRole';
 
 // Call & Callback Functions for Listener App
-// FIX: Corrected casing in import path to match file name 'callRequest.ts'.
-export { generateZegoTokenForListener } from './listener/callRequest';
-// FIX: Corrected casing in import path to match file name 'initiateCallback.ts'.
-export { listener_initiateCallback } from './listener/initiateCallback';
+// FINAL FIX: Using simple, unique filenames to avoid any caching or pathing issues.
+export { generateZegoTokenForListener } from './listener/token';
+export { listener_initiateCallback } from './listener/callback';
 
 
 // ===================================================================================
