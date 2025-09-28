@@ -16,24 +16,36 @@ export const onListenerStatusChanged = functions
   .database.ref("/status/{uid}")
   .onWrite(async (change, context) => {
     const uid = context.params.uid;
+    const beforeData = change.before.val();
     const afterData = change.after.val();
-    
-    functions.logger.log(`Status change for listener: ${uid}`, afterData);
 
-    // Agar node delete ho gaya (logout/cleanup)
+    functions.logger.log(`Status write for listener: ${uid}`, { beforeData, afterData });
+
+    // Case 1: Node is deleted (e.g., user logs out, onDisconnect fires)
     if (!afterData) {
-      await updateListenerFirestoreStatus(uid, false);
+      // Only update Firestore if they were previously online
+      if (beforeData?.isOnline === true) {
+        await updateListenerFirestoreStatus(uid, false);
+      }
       return null;
     }
 
-    const isOnline = afterData.isOnline ?? false;
-    
-    try {
-      await updateListenerFirestoreStatus(uid, isOnline);
-      functions.logger.log(`✅ Synced ${uid}: ${isOnline ? 'Online' : 'Offline'}`);
-    } catch (error) {
-      functions.logger.error(`❌ Sync failed for ${uid}:`, error);
+    const beforeOnline = beforeData?.isOnline ?? false;
+    const afterOnline = afterData.isOnline ?? false;
+
+    // Case 2: The online status has actually changed.
+    // This is the key optimization. It prevents writes on heartbeats or other non-status changes.
+    if (beforeOnline !== afterOnline) {
+      try {
+        await updateListenerFirestoreStatus(uid, afterOnline);
+        functions.logger.log(`✅ Synced ${uid}: ${afterOnline ? "Online" : "Offline"}`);
+      } catch (error) {
+        functions.logger.error(`❌ Sync failed for ${uid}:`, error);
+      }
+    } else {
+      functions.logger.log(`Skipping Firestore sync for ${uid}, online status unchanged.`);
     }
+
 
     return null;
   });
